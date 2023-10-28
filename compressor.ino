@@ -11,9 +11,7 @@ TimerMs poweroffCheck(100, 1, 0);
 PowerOff powerOff(POWEROFFPIN);
 PowerOffNotify powerOffNotify;
 
-void setup() {
-  pinMode(POWEROFFPIN, INPUT);
-}
+void setup() { pinMode(POWEROFFPIN, INPUT); }
 
 void loop() {
   if (poweroffCheck.tick()) {
