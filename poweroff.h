@@ -2,7 +2,10 @@ const int DEBOUNCE = 100;
 
 class PowerOff {
 public:
-  PowerOff(byte pin) : _pin(pin) { pinMode(_pin, INPUT); }
+  PowerOff(byte pin) : _pin(pin) {
+    pinMode(_pin, INPUT);
+    _tmr = millis();
+  }
 
   bool need() {
     bool powerState = digitalRead(_pin);
