@@ -23,5 +23,5 @@ public:
   }
 
 private:
-  bool _on;
+  bool _on = true;
 };
