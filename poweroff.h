@@ -2,7 +2,7 @@ const int DEBOUNCE = 100;
 
 class PowerOff {
 public:
-  PowerOff(byte pin) : _pin(pin) {
+  PowerOff(uint8_t pin) : _pin(pin) {
     pinMode(_pin, INPUT);
     _tmr = millis();
   }
@@ -24,7 +24,7 @@ public:
   }
 
 private:
-  const byte _pin;
+  const uint8_t _pin;
   uint32_t _tmr;
   bool _previousState;
 };
