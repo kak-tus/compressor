@@ -1,12 +1,3 @@
-const float baseVoltage = 5.0;
-const float deltaMAP = 0.37;
-const float angleMAP = 22.643;
-const float kpaToMM = 133.3224;
-const float temp1 = 18.5;
-const float temp2 = 62;
-const float temp1Voltage = 3.43;
-const float temp2Voltage = 1.86;
-
 class Sensor {
 public:
   Sensor(uint8_t tempPin, uint8_t mapPin) : _tempPin(tempPin), _mapPin(mapPin) {
@@ -51,6 +42,15 @@ public:
   float voltageTemp() { return _voltageTemp; }
 
 private:
+  const float baseVoltage = 5.0;
+  const float deltaMAP = 0.37;
+  const float angleMAP = 22.643;
+  const float kpaToMM = 133.3224;
+  const float temp1 = 18.5;
+  const float temp2 = 62;
+  const float temp1Voltage = 3.43;
+  const float temp2Voltage = 1.86;
+
   const uint8_t _tempPin;
   const uint8_t _mapPin;
   float _pressure, _temp;

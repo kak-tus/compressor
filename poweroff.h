@@ -1,5 +1,3 @@
-const int DEBOUNCE = 100;
-
 class PowerOff {
 public:
   PowerOff(uint8_t pin) : _pin(pin) {
@@ -24,6 +22,8 @@ public:
   }
 
 private:
+  const int DEBOUNCE = 100;
+
   const uint8_t _pin;
   uint32_t _tmr;
   bool _previousState;
