@@ -11,7 +11,7 @@ const uint8_t MAP1PIN = A0;
 const int LOOPDELAY = 10;
 
 TimerMs poweroffCheck(100, 1, 0);
-TimerMs logCheck(500, 1, 0);
+TimerMs logCheck(1000, 1, 0);
 
 PowerOff powerOff(POWEROFFPIN);
 PowerOffNotify powerOffNotify;
