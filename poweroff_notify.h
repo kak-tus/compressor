@@ -1,5 +1,3 @@
-const uint8_t SYSTEMLED = 13;
-
 class PowerOffNotify {
 public:
   PowerOffNotify() { pinMode(SYSTEMLED, OUTPUT); }
@@ -23,5 +21,7 @@ public:
   }
 
 private:
+  const uint8_t SYSTEMLED = 13;
+
   bool _on = true;
 };
