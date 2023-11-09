@@ -165,6 +165,14 @@ public:
     return true;
   }
 
+  bool control() {
+    if (_failed){
+      return false;
+    }
+
+    return true;
+  }
+
 private:
   const uint8_t _pos1Pin, _pos2Pin;
   float _voltagePos1, _voltagePos2;

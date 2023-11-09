@@ -25,12 +25,21 @@ public:
     }
   }
 
+  void poweroff() {
+    if (!_on) {
+      return;
+    }
+
+    digitalWrite(_pin, OFF);
+    _on = false;
+  }
+
 private:
   const uint8_t _pin;
   const float _onTemp, _offTemp;
 
-  const uint8_t ON = 0;
-  const uint8_t OFF = 1;
+  const uint8_t ON = LOW;
+  const uint8_t OFF = HIGH;
 
   bool _on = false;
 };

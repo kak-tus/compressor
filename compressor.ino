@@ -47,11 +47,15 @@ Sensor sens1(TEMP1_PIN, MAP1_PIN);
 // by controller, it used by EBU block
 Sensor sens2(TEMP1_PIN, MAP2_PIN);
 
-Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN, R_PWM_PIN);
+Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
+             R_PWM_PIN);
 
-TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE, PUMP_OFF_TEMPERATURE);
+TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
+                                PUMP_OFF_TEMPERATURE);
 TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
                                   COOLER_OFF_TEMPERATURE);
+
+bool failed = false;
 
 void setup() {
   Serial.begin(9600);
@@ -59,6 +63,14 @@ void setup() {
 }
 
 void loop() {
+  if (!thr.control()) {
+    if (!failed) {
+      failed = true;
+      tControlPump.poweroff();
+      tControlCooler.poweroff();
+    }
+  }
+
   if (poweroffCheck.tick()) {
     if (powerOff.need()) {
       powerOffNotify.poweroff();
@@ -71,7 +83,7 @@ void loop() {
     log();
   }
 
-  if (heatCheck.tick()) {
+  if (heatCheck.tick() && !failed) {
     float temp = sens1.temperature();
     tControlPump.control(temp);
     tControlCooler.control(temp);
@@ -123,4 +135,3 @@ void log() {
     Serial.println(thr.voltagePosition2());
   }
 }
-
