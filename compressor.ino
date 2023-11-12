@@ -1,6 +1,7 @@
 #include <BTS7960.h>
 #include <TimerMs.h>
 
+#include "errors.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
 #include "sensor.h"
@@ -35,6 +36,8 @@ const uint8_t EN_PIN = 3;
 const uint8_t R_PWM_PIN = 6;
 const uint8_t L_PWM_PIN = 5;
 
+const uint8_t BEEP_PIN = 10;
+
 TimerMs poweroffCheck(100, 1, 0);
 TimerMs logCheck(1000, 1, 0);
 TimerMs heatCheck(1000, 1, 0);
@@ -55,6 +58,8 @@ TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
 TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
                                   COOLER_OFF_TEMPERATURE);
 
+Errors err(BEEP_PIN);
+
 bool failed = false;
 
 void setup() {
@@ -66,8 +71,14 @@ void loop() {
   if (!thr.control()) {
     if (!failed) {
       failed = true;
+
       tControlPump.poweroff();
       tControlCooler.poweroff();
+
+      Serial.print("Fail state: ");
+      Serial.println(thr.failStateCode());
+
+      err.error(thr.failStateCode());
     }
   }
 

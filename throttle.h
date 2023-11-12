@@ -50,7 +50,7 @@ public:
   bool sensorsOk() {
     // Use stored _pos1 value - assume that sensorsOk called only after
     // position()
-    if (abs(_pos1 - (100 - position2())) <= 1) {
+    if (abs(_pos1 - (100 - position2())) <= 2) {
       return true;
     }
 
@@ -60,12 +60,6 @@ public:
   void check() {
     _motor.Enable();
 
-    if (!sensorsOk()) {
-      _failed = true;
-      syncOpen();
-      return;
-    }
-
     unsigned long start = millis();
 
     while (position() < 100) {
@@ -74,13 +68,17 @@ public:
 
       if (!sensorsOk()) {
         _failed = true;
+        _failStateCode = 1;
         syncOpen();
+        _motor.Disable();
         return;
       }
 
       if (timeout(start, _operationLimit)) {
         _failed = true;
+        _failStateCode = 2;
         syncOpen();
+        _motor.Disable();
         return;
       }
     }
@@ -88,25 +86,33 @@ public:
     _motor.Stop();
     delay(1000);
 
-    while (position() > 80) {
+    start = millis();
+
+    while (position() > 70) {
       close(speedLow);
       delay(1);
 
       if (!sensorsOk()) {
         _failed = true;
+        _failStateCode = 3;
         syncOpen();
+        _motor.Disable();
         return;
       }
 
       if (timeout(start, _operationLimit)) {
         _failed = true;
+        _failStateCode = 4;
         syncOpen();
+        _motor.Disable();
         return;
       }
     }
 
     _motor.Stop();
     delay(1000);
+
+    start = millis();
 
     while (position() < 100) {
       open(speedLow);
@@ -114,13 +120,17 @@ public:
 
       if (!sensorsOk()) {
         _failed = true;
+        _failStateCode = 5;
         syncOpen();
+        _motor.Disable();
         return;
       }
 
       if (timeout(start, _operationLimit)) {
         _failed = true;
+        _failStateCode = 6;
         syncOpen();
+        _motor.Disable();
         return;
       }
     }
@@ -157,7 +167,7 @@ public:
     _motor.TurnLeft(pwm);
   }
 
-  bool timeout(unsigned long start, uint8_t operationLimit) {
+  bool timeout(unsigned long start, uint16_t operationLimit) {
     if (millis() - start < operationLimit) {
       return false;
     }
@@ -166,12 +176,14 @@ public:
   }
 
   bool control() {
-    if (_failed){
+    if (_failed) {
       return false;
     }
 
     return true;
   }
+
+  uint8_t failStateCode() { return _failStateCode; }
 
 private:
   const uint8_t _pos1Pin, _pos2Pin;
@@ -196,5 +208,7 @@ private:
 
   bool _failed = false;
 
-  const uint8_t _operationLimit = 1000;
+  const uint16_t _operationLimit = 1500;
+
+  uint8_t _failStateCode = 0;
 };
