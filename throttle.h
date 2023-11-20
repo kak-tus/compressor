@@ -147,24 +147,49 @@ public:
     }
   }
 
-  void close(uint8_t pwm) {
+  void close(uint8_t speed) {
     if (_inClose) {
+      if (_current_speed != speed) {
+        _current_speed = speed;
+        _motor.TurnRight(speed);
+      }
+
       return;
     }
 
-    _inClose = true;
     _inOpen = false;
-    _motor.TurnRight(pwm);
+    _inClose = true;
+    _inStop = false;
+    _current_speed = speed;
+    _motor.TurnRight(speed);
   }
 
-  void open(uint8_t pwm) {
+  void open(uint8_t speed) {
     if (_inOpen) {
+      if (_current_speed != speed) {
+        _current_speed = speed;
+        _motor.TurnLeft(speed);
+      }
+
       return;
     }
 
     _inOpen = true;
     _inClose = false;
-    _motor.TurnLeft(pwm);
+    _inStop = false;
+    _current_speed = speed;
+    _motor.TurnLeft(speed);
+  }
+
+  void stop() {
+    if (_inStop) {
+      return;
+    }
+
+    _inOpen = false;
+    _inClose = false;
+    _inStop = true;
+    _motor.Stop();
   }
 
   bool timeout(unsigned long start, uint16_t operationLimit) {
@@ -180,10 +205,67 @@ public:
       return false;
     }
 
+    if (!_in_hold) {
+      return true;
+    }
+
+    uint8_t pos = position();
+
+    if (pos < _hold_position) {
+      open(_hold_speed);
+
+      // Open faster, then close
+      // to do blowoff
+      if (timeout(_hold_speed_changed, 10)) {
+        _hold_speed += 1;
+        _hold_speed_changed = millis();
+      }
+    } else if (pos > _hold_position) {
+      close(_hold_speed);
+
+      // Close slower, then open
+      // to do smooth boost
+      if (timeout(_hold_speed_changed, 100)) {
+        _hold_speed += 1;
+        _hold_speed_changed = millis();
+      }
+    } else {
+      _hold_speed = speedLow;
+      _hold_speed_changed = millis();
+      stop();
+    }
+
+    // Open faster, then close
+    // to do blowoff
+    // Close slower, then open
+    // to do smooth boost
+    if (_hold_position < _hold_position_want &&
+        timeout(_hold_position_changed, 10)) {
+      _hold_position++;
+      _hold_position_changed = millis();
+    } else if (_hold_position > _hold_position_want &&
+               timeout(_hold_position_changed, 100)) {
+      _hold_position--;
+      _hold_position_changed = millis();
+    }
+
     return true;
   }
 
   uint8_t failStateCode() { return _failStateCode; }
+
+  void hold(uint8_t pos) {
+    if (!_in_hold) {
+      _in_hold = true;
+      _motor.Enable();
+      _hold_speed = speedLow;
+      _hold_speed_changed = millis();
+      _hold_position = position();
+      _hold_position_changed = millis();
+    }
+
+    _hold_position_want = pos;
+  }
 
 private:
   const uint8_t _pos1Pin, _pos2Pin;
@@ -203,6 +285,9 @@ private:
 
   bool _inOpen = false;
   bool _inClose = false;
+  bool _inStop = false;
+
+  uint8_t _current_speed;
 
   const uint8_t speedLow = 20;
 
@@ -211,4 +296,10 @@ private:
   const uint16_t _operationLimit = 1500;
 
   uint8_t _failStateCode = 0;
+
+  bool _in_hold = false;
+  uint8_t _hold_position, _hold_position_want;
+  uint8_t _hold_speed;
+
+  unsigned long _hold_speed_changed, _hold_position_changed;
 };

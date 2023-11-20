@@ -65,6 +65,7 @@ bool failed = false;
 void setup() {
   Serial.begin(9600);
   thr.check();
+  thr.hold(50);
 }
 
 void loop() {
