@@ -38,9 +38,9 @@ const uint8_t L_PWM_PIN = 5;
 
 const uint8_t BEEP_PIN = 10;
 
-TimerMs poweroffCheck(100, 1, 0);
-TimerMs logCheck(1000, 1, 0);
-TimerMs heatCheck(1000, 1, 0);
+TimerMs poweroffCheck(100, true, false);
+TimerMs logCheck(1000, true, false);
+TimerMs heatCheck(1000, true, false);
 
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
@@ -61,6 +61,7 @@ TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
 Errors err(BEEP_PIN);
 
 bool failed = false;
+bool poweredoff = false;
 
 void setup() {
   Serial.begin(9600);
@@ -69,6 +70,10 @@ void setup() {
 }
 
 void loop() {
+  if (!failed && !poweredoff) {
+    thr.hold(50);
+  }
+
   if (!thr.control()) {
     if (!failed) {
       failed = true;
@@ -84,9 +89,12 @@ void loop() {
   }
 
   if (poweroffCheck.tick()) {
-    if (powerOff.need()) {
+    if (powerOff.need() && !poweredoff) {
+      poweredoff = true;
       powerOffNotify.poweroff();
-    } else {
+      thr.poweroff();
+    } else if (!powerOff.need() && poweredoff) {
+      poweredoff = false;
       powerOffNotify.poweron();
     }
   }
@@ -95,7 +103,7 @@ void loop() {
     log();
   }
 
-  if (heatCheck.tick() && !failed) {
+  if (heatCheck.tick() && !failed && !poweredoff) {
     float temp = sens1.temperature();
     tControlPump.control(temp);
     tControlCooler.control(temp);

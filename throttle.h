@@ -1,10 +1,12 @@
 #include <BTS7960.h>
+#include <TimerMs.h>
 
 class Throttle {
 public:
   Throttle(uint8_t position1Pin, uint8_t position2Pin, uint8_t en, uint8_t lPwm,
            uint8_t rPwm)
-      : _pos1Pin(position1Pin), _pos2Pin(position2Pin), _motor(en, lPwm, rPwm) {
+      : _pos1Pin(position1Pin), _pos2Pin(position2Pin), _motor(en, lPwm, rPwm),
+        _openedCheck(1000, true, false) {
     pinMode(_pos1Pin, INPUT);
     pinMode(_pos2Pin, INPUT);
   }
@@ -149,8 +151,8 @@ public:
 
   void close(uint8_t speed) {
     if (_status == IN_CLOSE) {
-      if (_current_speed != speed) {
-        _current_speed = speed;
+      if (_currentSpeed != speed) {
+        _currentSpeed = speed;
         _motor.TurnRight(speed);
       }
 
@@ -158,14 +160,14 @@ public:
     }
 
     _status = IN_CLOSE;
-    _current_speed = speed;
+    _currentSpeed = speed;
     _motor.TurnRight(speed);
   }
 
   void open(uint8_t speed) {
     if (_status == IN_OPEN) {
-      if (_current_speed != speed) {
-        _current_speed = speed;
+      if (_currentSpeed != speed) {
+        _currentSpeed = speed;
         _motor.TurnLeft(speed);
       }
 
@@ -173,7 +175,7 @@ public:
     }
 
     _status = IN_OPEN;
-    _current_speed = speed;
+    _currentSpeed = speed;
     _motor.TurnLeft(speed);
   }
 
@@ -199,33 +201,47 @@ public:
       return false;
     }
 
-    if (!_in_hold) {
+    switch (_holdStatus) {
+    case IN_HOLD:
+      return controlHold();
+    case IN_POWEROFF:
+      return controlPoweroff();
+    default:
+      if (_openedCheck.tick()) {
+        // Periodically check that throttle was'n uncontrolled open
+        if (position() < 100) {
+          poweroff();
+        }
+      }
+
       return true;
     }
+  }
 
+  bool controlHold() {
     uint8_t pos = position();
 
-    if (pos < _hold_position) {
-      open(_hold_speed);
+    if (pos < _holdPosition) {
+      open(_holdSpeed);
 
       // Open faster, then close
       // to do blowoff
-      if (timeout(_hold_speed_changed, 10)) {
-        _hold_speed += 1;
-        _hold_speed_changed = millis();
+      if (timeout(_holdSpeedChanged, 10)) {
+        _holdSpeed += 1;
+        _holdSpeedChanged = millis();
       }
-    } else if (pos > _hold_position) {
-      close(_hold_speed);
+    } else if (pos > _holdPosition) {
+      close(_holdSpeed);
 
       // Close slower, then open
       // to do smooth boost
-      if (timeout(_hold_speed_changed, 100)) {
-        _hold_speed += 1;
-        _hold_speed_changed = millis();
+      if (timeout(_holdSpeedChanged, 100)) {
+        _holdSpeed += 1;
+        _holdSpeedChanged = millis();
       }
     } else {
-      _hold_speed = speedLow;
-      _hold_speed_changed = millis();
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
       stop();
     }
 
@@ -233,14 +249,32 @@ public:
     // to do blowoff
     // Close slower, then open
     // to do smooth boost
-    if (_hold_position < _hold_position_want &&
-        timeout(_hold_position_changed, 10)) {
-      _hold_position++;
-      _hold_position_changed = millis();
-    } else if (_hold_position > _hold_position_want &&
-               timeout(_hold_position_changed, 100)) {
-      _hold_position--;
-      _hold_position_changed = millis();
+    if (_holdPosition < _holdPositionWant &&
+        timeout(_holdPositionChanged, 10)) {
+      _holdPosition++;
+      _holdPositionChanged = millis();
+    } else if (_holdPosition > _holdPositionWant &&
+               timeout(_holdPositionChanged, 30)) {
+      _holdPosition--;
+      _holdPositionChanged = millis();
+    }
+
+    return true;
+  }
+
+  bool controlPoweroff() {
+    if (position() < 100) {
+      open(_holdSpeed);
+
+      if (timeout(_holdSpeedChanged, 100)) {
+        _holdSpeed += 1;
+        _holdSpeedChanged = millis();
+      }
+    } else {
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
+      _motor.Disable();
+      _holdStatus = holdStatus(0);
     }
 
     return true;
@@ -249,16 +283,35 @@ public:
   uint8_t failStateCode() { return _failStateCode; }
 
   void hold(uint8_t pos) {
-    if (!_in_hold) {
-      _in_hold = true;
-      _motor.Enable();
-      _hold_speed = speedLow;
-      _hold_speed_changed = millis();
-      _hold_position = position();
-      _hold_position_changed = millis();
+    if (_failed) {
+      return;
     }
 
-    _hold_position_want = pos;
+    if (_holdStatus != IN_HOLD) {
+      _holdStatus = IN_HOLD;
+      _motor.Enable();
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
+      _holdPosition = position();
+      _holdPositionChanged = millis();
+    }
+
+    _holdPositionWant = pos;
+  }
+
+  void poweroff() {
+    if (_failed) {
+      return;
+    }
+
+    if (_holdStatus != IN_HOLD) {
+      return;
+    }
+
+    _holdStatus = IN_POWEROFF;
+    _motor.Enable();
+    _holdSpeed = speedLow;
+    _holdSpeedChanged = millis();
   }
 
 private:
@@ -281,7 +334,7 @@ private:
 
   status _status;
 
-  uint8_t _current_speed;
+  uint8_t _currentSpeed;
 
   const uint8_t speedLow = 20;
 
@@ -291,9 +344,13 @@ private:
 
   uint8_t _failStateCode = 0;
 
-  bool _in_hold = false;
-  uint8_t _hold_position, _hold_position_want;
-  uint8_t _hold_speed;
+  enum holdStatus { IN_HOLD = 1, IN_POWEROFF };
 
-  unsigned long _hold_speed_changed, _hold_position_changed;
+  holdStatus _holdStatus;
+  uint8_t _holdPosition, _holdPositionWant;
+  uint8_t _holdSpeed;
+
+  unsigned long _holdSpeedChanged, _holdPositionChanged;
+
+  TimerMs _openedCheck;
 };
