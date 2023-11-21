@@ -148,7 +148,7 @@ public:
   }
 
   void close(uint8_t speed) {
-    if (_inClose) {
+    if (_status == IN_CLOSE) {
       if (_current_speed != speed) {
         _current_speed = speed;
         _motor.TurnRight(speed);
@@ -157,15 +157,13 @@ public:
       return;
     }
 
-    _inOpen = false;
-    _inClose = true;
-    _inStop = false;
+    _status = IN_CLOSE;
     _current_speed = speed;
     _motor.TurnRight(speed);
   }
 
   void open(uint8_t speed) {
-    if (_inOpen) {
+    if (_status == IN_OPEN) {
       if (_current_speed != speed) {
         _current_speed = speed;
         _motor.TurnLeft(speed);
@@ -174,21 +172,17 @@ public:
       return;
     }
 
-    _inOpen = true;
-    _inClose = false;
-    _inStop = false;
+    _status = IN_OPEN;
     _current_speed = speed;
     _motor.TurnLeft(speed);
   }
 
   void stop() {
-    if (_inStop) {
+    if (_status == IN_STOP) {
       return;
     }
 
-    _inOpen = false;
-    _inClose = false;
-    _inStop = true;
+    _status = IN_STOP;
     _motor.Stop();
   }
 
@@ -283,9 +277,9 @@ private:
 
   BTS7960 _motor;
 
-  bool _inOpen = false;
-  bool _inClose = false;
-  bool _inStop = false;
+  enum status { IN_OPEN = 1, IN_CLOSE, IN_STOP };
+
+  status _status;
 
   uint8_t _current_speed;
 
