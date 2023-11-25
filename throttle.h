@@ -233,11 +233,13 @@ public:
     uint8_t pos = position();
 
     if (_holdReached) {
+      // TODO Add possible corrections
     } else {
       if (_holdDirection == OPEN) {
         if (pos < _holdPositionWant) {
           open(_holdSpeed);
 
+          // TODO control speed
           //   // Open faster, then close
           //   // to do blowoff
           //   if (timeout(_holdSpeedChanged, 10)) {
