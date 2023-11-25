@@ -75,8 +75,11 @@ public:
 
     unsigned long start = millis();
 
+    open(speedLowStart);
+    delay(2);
+    open(speedLow);
+
     while (position() < 100) {
-      open(speedLow);
       delay(1);
 
       if (!sensorsOk()) {
@@ -101,8 +104,11 @@ public:
 
     start = millis();
 
+    close(speedLowStart);
+    delay(2);
+    close(speedLow);
+
     while (position() > 70) {
-      close(speedLow);
       delay(1);
 
       if (!sensorsOk()) {
@@ -127,8 +133,11 @@ public:
 
     start = millis();
 
+    open(speedLowStart);
+    delay(2);
+    open(speedLow);
+
     while (position() < 100) {
-      open(speedLow);
       delay(1);
 
       if (!sensorsOk()) {
@@ -154,8 +163,9 @@ public:
   void syncOpen() {
     unsigned long start = millis();
 
+    open(speedLowStart);
+
     while (position() < 100 && !timeout(start, _operationLimit)) {
-      open(speedLow);
       delay(1);
     }
   }
@@ -172,6 +182,9 @@ public:
 
     _status = IN_CLOSE;
     _currentSpeed = speed;
+
+    _motor.TurnRight(speedLowStart);
+    delay(2);
     _motor.TurnRight(speed);
   }
 
@@ -187,6 +200,9 @@ public:
 
     _status = IN_OPEN;
     _currentSpeed = speed;
+
+    _motor.TurnLeft(speedLowStart);
+    delay(2);
     _motor.TurnLeft(speed);
   }
 
@@ -446,7 +462,8 @@ private:
 
   uint8_t _currentSpeed;
 
-  const uint8_t speedLow = 20;
+  const uint8_t speedLowStart = 20;
+  const uint8_t speedLow = 14;
 
   bool _failed = false;
 

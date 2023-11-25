@@ -48,8 +48,8 @@ TimerMs heatCheck(1000, true, false);
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
-const int16_t sensor1MapCorrection = -700;
-const int16_t sensor2MapCorrection = 700;
+const int16_t sensor1MapCorrection = 0;
+const int16_t sensor2MapCorrection = 1400;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
