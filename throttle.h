@@ -48,11 +48,22 @@ public:
   float voltagePosition1() { return _voltagePos1; }
   float voltagePosition2() { return _voltagePos2; }
 
+  uint8_t status() { return uint8_t(_status); }
+  uint8_t speed() { return _currentSpeed; }
+  uint8_t holdStatus() { return uint8_t(_holdStatus); }
+  uint8_t holdPositionWant() { return _holdPositionWant; }
+  uint8_t holdPositionFinal() { return _holdPositionFinal; }
+  uint8_t holdPositionStart() { return _holdPositionStart; }
+  uint8_t holdSpeed() { return _holdSpeed; }
+  bool holdReached() { return _holdReached; }
+  uint8_t holdDirection() { return uint8_t(_holdDirection); }
+  unsigned long holdStartAt() { return _holdStartAt; }
+
   // Call sensorsOk only after position() call
   bool sensorsOk() {
     // Use stored _pos1 value - assume that sensorsOk called only after
     // position()
-    if (abs(_pos1 - (100 - position2())) <= 2) {
+    if (abs(_pos1 - (100 - position2())) <= sensorsOkDelta) {
       return true;
     }
 
@@ -221,42 +232,65 @@ public:
   bool controlHold() {
     uint8_t pos = position();
 
-    if (pos < _holdPosition) {
-      open(_holdSpeed);
-
-      // Open faster, then close
-      // to do blowoff
-      if (timeout(_holdSpeedChanged, 10)) {
-        _holdSpeed += 1;
-        _holdSpeedChanged = millis();
-      }
-    } else if (pos > _holdPosition) {
-      close(_holdSpeed);
-
-      // Close slower, then open
-      // to do smooth boost
-      if (timeout(_holdSpeedChanged, 100)) {
-        _holdSpeed += 1;
-        _holdSpeedChanged = millis();
-      }
+    if (_holdReached) {
     } else {
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
-      stop();
+      if (_holdDirection == OPEN) {
+        if (pos < _holdPositionWant) {
+          open(_holdSpeed);
+
+          //   // Open faster, then close
+          //   // to do blowoff
+          //   if (timeout(_holdSpeedChanged, 10)) {
+          //     _holdSpeed += 1;
+          //     _holdSpeedChanged = millis();
+          //   }
+        } else {
+          _holdSpeed = speedLow;
+          _holdSpeedChanged = millis();
+          _holdReached = true;
+          stop();
+        }
+      } else if (_holdDirection == CLOSE) {
+        if (pos > _holdPositionWant) {
+          close(_holdSpeed);
+
+          //   // Close slower, then open
+          //   // to do smooth boost
+          //   if (timeout(_holdSpeedChanged, 100)) {
+          //     _holdSpeed += 1;
+          //     _holdSpeedChanged = millis();
+          //   }
+        } else {
+          _holdSpeed = speedLow;
+          _holdSpeedChanged = millis();
+          _holdReached = true;
+          stop();
+        }
+      }
     }
 
     // Open faster, then close
     // to do blowoff
     // Close slower, then open
     // to do smooth boost
-    if (_holdPosition < _holdPositionWant &&
-        timeout(_holdPositionChanged, 10)) {
-      _holdPosition++;
-      _holdPositionChanged = millis();
-    } else if (_holdPosition > _holdPositionWant &&
-               timeout(_holdPositionChanged, 30)) {
-      _holdPosition--;
-      _holdPositionChanged = millis();
+    if (_holdPositionWant < _holdPositionFinal) {
+      _holdPositionWant = _holdPositionStart + (millis() - _holdStartAt) / 10;
+      if (_holdPositionWant > _holdPositionFinal) {
+        _holdPositionWant = _holdPositionFinal;
+      }
+
+      _holdReached = false;
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
+    } else if (_holdPositionWant > _holdPositionFinal) {
+      _holdPositionWant = _holdPositionStart - (millis() - _holdStartAt) / 100;
+      if (_holdPositionWant < _holdPositionFinal) {
+        _holdPositionWant = _holdPositionFinal;
+      }
+
+      _holdReached = false;
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
     }
 
     return true;
@@ -274,7 +308,8 @@ public:
       _holdSpeed = speedLow;
       _holdSpeedChanged = millis();
       _motor.Disable();
-      _holdStatus = holdStatus(0);
+      _holdStatus = holdStatusType(0);
+      _holdReached = true;
     }
 
     return true;
@@ -290,13 +325,78 @@ public:
     if (_holdStatus != IN_HOLD) {
       _holdStatus = IN_HOLD;
       _motor.Enable();
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
-      _holdPosition = position();
-      _holdPositionChanged = millis();
+
+      uint8_t _currPos = position();
+
+      _holdPositionWant = _currPos;
+      _holdPositionStart = _currPos;
+      _holdPositionFinal = pos;
+      _holdStartAt = millis();
+
+      if (_currPos < pos) {
+        _holdDirection = OPEN;
+        _holdReached = false;
+        _holdSpeed = speedLow;
+        _holdSpeedChanged = millis();
+      } else if (_currPos > pos) {
+        _holdDirection = CLOSE;
+        _holdReached = false;
+        _holdSpeed = speedLow;
+        _holdSpeedChanged = millis();
+      } else {
+        _holdReached = true;
+      }
+
+      return;
     }
 
-    _holdPositionWant = pos;
+    if (pos == _holdPositionFinal) {
+      return;
+    }
+
+    uint8_t _currPos = position();
+
+    if (pos == _currPos) {
+      _holdPositionStart = _currPos;
+      _holdPositionFinal = pos;
+      _holdStartAt = millis();
+      _holdReached = true;
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
+      return;
+    }
+
+    if (_holdDirection == OPEN) {
+      if (_currPos < pos) {
+        // Continue open
+        _holdPositionFinal = pos;
+        _holdReached = false;
+      } else {
+        // Direction changed
+        _holdPositionStart = _currPos;
+        _holdPositionFinal = pos;
+        _holdStartAt = millis();
+        _holdDirection = CLOSE;
+        _holdReached = false;
+        _holdSpeed = speedLow;
+        _holdSpeedChanged = millis();
+      }
+    } else if (_holdDirection == CLOSE) {
+      if (_currPos > pos) {
+        // Continue close
+        _holdPositionFinal = pos;
+        _holdReached = false;
+      } else {
+        // Direction changed
+        _holdPositionStart = _currPos;
+        _holdPositionFinal = pos;
+        _holdStartAt = millis();
+        _holdDirection = OPEN;
+        _holdReached = false;
+        _holdSpeed = speedLow;
+        _holdSpeedChanged = millis();
+      }
+    }
   }
 
   void poweroff() {
@@ -312,6 +412,12 @@ public:
     _motor.Enable();
     _holdSpeed = speedLow;
     _holdSpeedChanged = millis();
+
+    // Not using in poweroff operation processing, only for logging purposes
+    _holdPositionFinal = 100;
+    _holdPositionStart = position();
+    _holdDirection = OPEN;
+    _holdStartAt = millis();
   }
 
 private:
@@ -328,11 +434,13 @@ private:
   const float maxVoltageSens2 = 4.35 - delta;
   const float minVoltageSens2 = 0.49 + delta;
 
+  const uint8_t sensorsOkDelta = 4;
+
   BTS7960 _motor;
 
-  enum status { IN_OPEN = 1, IN_CLOSE, IN_STOP };
+  enum statusType { IN_OPEN = 1, IN_CLOSE, IN_STOP };
 
-  status _status;
+  statusType _status;
 
   uint8_t _currentSpeed;
 
@@ -340,17 +448,21 @@ private:
 
   bool _failed = false;
 
-  const uint16_t _operationLimit = 1500;
+  const uint16_t _operationLimit = 2000;
 
   uint8_t _failStateCode = 0;
 
-  enum holdStatus { IN_HOLD = 1, IN_POWEROFF };
+  enum holdStatusType { IN_HOLD = 1, IN_POWEROFF };
 
-  holdStatus _holdStatus;
-  uint8_t _holdPosition, _holdPositionWant;
+  holdStatusType _holdStatus;
+  uint8_t _holdPositionWant, _holdPositionFinal, _holdPositionStart;
   uint8_t _holdSpeed;
+  bool _holdReached;
 
-  unsigned long _holdSpeedChanged, _holdPositionChanged;
+  enum holdDirectionType { OPEN, CLOSE };
+  holdDirectionType _holdDirection;
+
+  unsigned long _holdSpeedChanged, _holdStartAt;
 
   TimerMs _openedCheck;
 };

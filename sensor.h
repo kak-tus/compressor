@@ -1,6 +1,7 @@
 class Sensor {
 public:
-  Sensor(uint8_t tempPin, uint8_t mapPin) : _tempPin(tempPin), _mapPin(mapPin) {
+  Sensor(uint8_t tempPin, uint8_t mapPin, int16_t mapCorrection)
+      : _tempPin(tempPin), _mapPin(mapPin), _mapCorrection(mapCorrection) {
     pinMode(_tempPin, INPUT);
     pinMode(_mapPin, INPUT);
 
@@ -25,7 +26,7 @@ public:
     int value = analogRead(_mapPin);
     _voltageMap = (float)(value * baseVoltage) / 1024;
 
-    float rawPressure = (_voltageMap + deltaMAP) * angleMAP * 1000;
+    float rawPressure = (_voltageMap + deltaMAP) * angleMAP * 1000 + _mapCorrection;
 
     // Initial
     if (_pressure < 0.1) {
@@ -56,4 +57,5 @@ private:
   float _pressure, _temp;
   float _deltaTemp, _angleTemp;
   float _voltageMap, _voltageTemp;
+  int16_t _mapCorrection;
 };

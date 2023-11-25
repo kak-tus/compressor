@@ -1,6 +1,7 @@
 #include <BTS7960.h>
 #include <TimerMs.h>
 
+#include "controller.h"
 #include "errors.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
@@ -18,10 +19,12 @@ const uint8_t MAP2_PIN = A3;
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_SENSOR = false;
+const bool LOG_TEMPERATURE = false;
+const bool LOG_SENSOR = true;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = true;
+const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
+const bool LOG_THROTTLE_INTERNAL = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
@@ -45,10 +48,15 @@ TimerMs heatCheck(1000, true, false);
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
-Sensor sens1(TEMP1_PIN, MAP1_PIN);
+const int16_t sensor1MapCorrection = -700;
+const int16_t sensor2MapCorrection = 700;
+
+// Sensor 1 - in sensor, before throttle
+Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
 // Set same temperature pin as in sens1 because temp from sensor 2 is not used
 // by controller, it used by EBU block
-Sensor sens2(TEMP1_PIN, MAP2_PIN);
+// Sensor 2 - out sensor, after throttle
+Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
@@ -63,15 +71,16 @@ Errors err(BEEP_PIN);
 bool failed = false;
 bool poweredoff = false;
 
+Controller cntrl;
+
 void setup() {
   Serial.begin(9600);
   thr.check();
-  thr.hold(50);
 }
 
 void loop() {
   if (!failed && !poweredoff) {
-    thr.hold(50);
+    thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
   }
 
   if (!thr.control()) {
@@ -105,16 +114,21 @@ void loop() {
 
   if (heatCheck.tick() && !failed && !poweredoff) {
     float temp = sens1.temperature();
+
     tControlPump.control(temp);
     tControlCooler.control(temp);
+
+    cntrl.setTemperature(temp);
   }
 }
 
 void log() {
-  if (LOG_SENSOR) {
+  if (LOG_TEMPERATURE) {
     Serial.print(">temperature:");
     Serial.println(sens1.temperature());
+  }
 
+  if (LOG_SENSOR) {
     Serial.print(">sens1 pressure (pa):");
     Serial.println(sens1.pressure());
 
@@ -129,7 +143,7 @@ void log() {
   }
 
   if (LOG_SENSOR_RAW) {
-    Serial.print(">sens1 voltage temp:");
+    Serial.print(">voltage temp:");
     Serial.println(sens1.voltageTemp());
 
     Serial.print(">sens1 voltage map:");
@@ -153,5 +167,37 @@ void log() {
 
     Serial.print(">throttle 2 voltage:");
     Serial.println(thr.voltagePosition2());
+  }
+
+  if (LOG_THROTTLE_INTERNAL) {
+    Serial.print(">throttle status:");
+    Serial.println(thr.status());
+
+    Serial.print(">throttle speed:");
+    Serial.println(thr.speed());
+
+    Serial.print(">throttle hold status:");
+    Serial.println(thr.holdStatus());
+
+    Serial.print(">throttle hold speed:");
+    Serial.println(thr.holdSpeed());
+
+    Serial.print(">throttle hold position start:");
+    Serial.println(thr.holdPositionStart());
+
+    Serial.print(">throttle hold position want:");
+    Serial.println(thr.holdPositionWant());
+
+    Serial.print(">throttle hold position final:");
+    Serial.println(thr.holdPositionFinal());
+
+    Serial.print(">throttle hold reached:");
+    Serial.println(thr.holdReached());
+
+    Serial.print(">throttle hold direction:");
+    Serial.println(thr.holdDirection());
+
+    Serial.print(">throttle hold start at:");
+    Serial.println(thr.holdStartAt());
   }
 }
