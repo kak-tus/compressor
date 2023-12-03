@@ -8,6 +8,7 @@
 #include "sensor.h"
 #include "temperature_control.h"
 #include "throttle.h"
+#include "switch.h"
 
 const uint8_t POWEROFF_PIN = 2;
 
@@ -19,8 +20,8 @@ const uint8_t MAP2_PIN = A3;
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = true;
+const bool LOG_TEMPERATURE = true;
+const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
@@ -29,11 +30,11 @@ const bool LOG_THROTTLE_INTERNAL = false;
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
 
-const float PUMP_ON_TEMPERATURE = 30.0;
-const float PUMP_OFF_TEMPERATURE = 20.0;
+const float PUMP_ON_TEMPERATURE = 20.0;
+const float PUMP_OFF_TEMPERATURE = 19.0;
 
-const float COOLER_ON_TEMPERATURE = 35.0;
-const float COOLER_OFF_TEMPERATURE = 25.0;
+const float COOLER_ON_TEMPERATURE = 21.0;
+const float COOLER_OFF_TEMPERATURE = 20.0;
 
 const uint8_t EN_PIN = 3;
 const uint8_t R_PWM_PIN = 6;
@@ -73,6 +74,10 @@ bool poweredoff = false;
 
 Controller cntrl;
 
+const uint8_t COMPRESSOR_PIN = 4;
+
+Switch compressor(COMPRESSOR_PIN);
+
 void setup() {
   Serial.begin(9600);
   thr.check();
@@ -90,6 +95,8 @@ void loop() {
       tControlPump.poweroff();
       tControlCooler.poweroff();
 
+      compressor.poweroff();
+
       Serial.print("Fail state: ");
       Serial.println(thr.failStateCode());
 
@@ -100,10 +107,18 @@ void loop() {
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {
       poweredoff = true;
+
       powerOffNotify.poweroff();
+
+      compressor.poweroff();
+
       thr.poweroff();
+
+      tControlPump.poweroff();
+      tControlCooler.poweroff();
     } else if (!powerOff.need() && poweredoff) {
       poweredoff = false;
+
       powerOffNotify.poweron();
     }
   }

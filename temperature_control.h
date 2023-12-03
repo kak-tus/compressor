@@ -3,6 +3,7 @@ public:
   TemperatureControl(uint8_t controlPin, float onTemp, float offTemp)
       : _pin(controlPin), _onTemp(onTemp), _offTemp(offTemp) {
     pinMode(_pin, OUTPUT);
+    digitalWrite(_pin, OFF);
   }
 
   void control(float temp) {
