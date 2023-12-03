@@ -11,7 +11,7 @@ public:
         _rpmChange(100, true, false) {
     pinMode(_emulatorPin, INPUT);
     _rpm = minRPM;
-    // _rpmChangedAt = millis();
+    _rpmChangedAt = millis();
   }
 
   float temperature() { return _sens.temperature(); }
