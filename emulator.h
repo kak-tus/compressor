@@ -1,4 +1,5 @@
 #include "sensor.h"
+#include <TimerMs.h>
 
 class Emulator {
 public:
@@ -6,13 +7,18 @@ public:
 
   Emulator(uint8_t tempPin, uint8_t mapPin, int16_t mapCorrection,
            uint8_t emulatorPin, EmulatorType type)
-      : _sens(tempPin, mapPin, mapCorrection), _emulatorPin(emulatorPin) {
+      : _sens(tempPin, mapPin, mapCorrection), _emulatorPin(emulatorPin),
+        _rpmChange(100, true, false) {
     pinMode(_emulatorPin, INPUT);
+    _rpm = minRPM;
+    // _rpmChangedAt = millis();
   }
 
   float temperature() { return _sens.temperature(); }
 
   float pressure() {
+    uint8_t _prevPos = _throttlePos;
+
     int value = analogRead(_emulatorPin);
     float raw = (float)(value * baseVoltage) / 1024;
 
@@ -26,6 +32,36 @@ public:
       _throttlePos = 100;
     }
 
+    if (_rpmChange.tick()) {
+      if (_throttlePos <= throttleRPMDown && _rpm > minRPM) {
+        uint16_t delta = (throttleRPMDown - _throttlePos) * 10;
+
+        delta *= ((millis() - _rpmChangedAt) / 100);
+
+        _rpmChangedAt = millis();
+
+        if (delta > _rpm) {
+          _rpm = minRPM;
+        } else if (_rpm - delta < minRPM) {
+          _rpm = minRPM;
+        } else {
+          _rpm -= delta;
+        }
+      } else if (_throttlePos >= throttleRPMUp && _rpm < maxRPM) {
+        uint16_t delta = _throttlePos / 3;
+
+        delta *= ((millis() - _rpmChangedAt) / 100);
+
+        _rpmChangedAt = millis();
+
+        if (_rpm + delta > maxRPM) {
+          _rpm = maxRPM;
+        } else {
+          _rpm += delta;
+        }
+      }
+    }
+
     return _sens.pressure();
   }
 
@@ -34,6 +70,7 @@ public:
   float voltageTemp() { return _sens.voltageTemp(); }
 
   uint8_t throttle() { return _throttlePos; }
+  uint16_t rpm() { return _rpm; }
 
 private:
   Sensor _sens;
@@ -47,4 +84,11 @@ private:
   const float baseVoltage = 5.0;
 
   float _voltage;
+
+  uint16_t _rpm;
+  TimerMs _rpmChange;
+  unsigned long _rpmChangedAt;
+
+  const uint8_t throttleRPMDown = 10;
+  const uint8_t throttleRPMUp = 20;
 };

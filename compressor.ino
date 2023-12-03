@@ -232,7 +232,10 @@ void log() {
   }
 
   if (USE_EMULATOR && LOG_EMULATOR) {
-    Serial.print(">throttle emulator pos:");
+    Serial.print(">emulator throttle pos:");
     Serial.println(emul1.throttle());
+
+    Serial.print(">emulator rpm:");
+    Serial.println(emul1.rpm());
   }
 }
