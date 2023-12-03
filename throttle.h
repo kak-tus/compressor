@@ -75,9 +75,7 @@ public:
 
     unsigned long start = millis();
 
-    open(speedLowStart);
-    delay(2);
-    open(speedLow);
+    open(speedLowCheck);
 
     while (position() < 100) {
       delay(1);
@@ -104,9 +102,7 @@ public:
 
     start = millis();
 
-    close(speedLowStart);
-    delay(2);
-    close(speedLow);
+    close(speedLowCheck);
 
     while (position() > 70) {
       delay(1);
@@ -133,9 +129,7 @@ public:
 
     start = millis();
 
-    open(speedLowStart);
-    delay(2);
-    open(speedLow);
+    open(speedLowCheck);
 
     while (position() < 100) {
       delay(1);
@@ -464,6 +458,7 @@ private:
 
   const uint8_t speedLowStart = 20;
   const uint8_t speedLow = 14;
+  const uint8_t speedLowCheck = 30;
 
   bool _failed = false;
 

@@ -2,13 +2,14 @@
 #include <TimerMs.h>
 
 #include "controller.h"
+#include "emulator.h"
 #include "errors.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
-#include "sensor.h"
+// #include "sensor.h"
+#include "switch.h"
 #include "temperature_control.h"
 #include "throttle.h"
-#include "switch.h"
 
 const uint8_t POWEROFF_PIN = 2;
 
@@ -20,12 +21,13 @@ const uint8_t MAP2_PIN = A3;
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_TEMPERATURE = true;
+const bool LOG_TEMPERATURE = false;
 const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
+const bool LOG_EMULATOR = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
@@ -59,6 +61,15 @@ Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
 // Sensor 2 - out sensor, after throttle
 Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
+const bool USE_EMULATOR = true;
+
+const uint8_t EMULATOR_PIN = A5;
+
+Emulator emul1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection, EMULATOR_PIN,
+               Emulator::BEFORE_THROTTLE);
+Emulator emul2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection, EMULATOR_PIN,
+               Emulator::AFTER_THROTTLE);
+
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
 
@@ -85,7 +96,11 @@ void setup() {
 
 void loop() {
   if (!failed && !poweredoff) {
-    thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
+    if (USE_EMULATOR) {
+      thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
+    } else {
+      thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
+    }
   }
 
   if (!thr.control()) {
@@ -147,17 +162,17 @@ void log() {
     Serial.print(">sens1 pressure (pa):");
     Serial.println(sens1.pressure());
 
-    Serial.print(">sens1 pressure (mm):");
-    Serial.println(sens1.pressureInMM());
-
     Serial.print(">sens2 pressure (pa):");
     Serial.println(sens2.pressure());
-
-    Serial.print(">sens2 pressure (mm):");
-    Serial.println(sens2.pressureInMM());
   }
 
   if (LOG_SENSOR_RAW) {
+    Serial.print(">sens1 pressure (mm):");
+    Serial.println(sens1.pressureInMM());
+
+    Serial.print(">sens2 pressure (mm):");
+    Serial.println(sens2.pressureInMM());
+
     Serial.print(">voltage temp:");
     Serial.println(sens1.voltageTemp());
 
@@ -214,5 +229,10 @@ void log() {
 
     Serial.print(">throttle hold start at:");
     Serial.println(thr.holdStartAt());
+  }
+
+  if (USE_EMULATOR && LOG_EMULATOR) {
+    Serial.print(">throttle emulator pos:");
+    Serial.println(emul1.throttle());
   }
 }
