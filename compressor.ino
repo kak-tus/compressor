@@ -97,7 +97,14 @@ void setup() {
 void loop() {
   if (!failed && !poweredoff) {
     if (USE_EMULATOR) {
-      thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
+      uint8_t pos = cntrl.percent(emul1.pressure(), emul2.pressure());
+
+      // Set pos only for emul1 sensor (before throttle), because pressure for
+      // emul2 sensor calced with emulated throttle position
+      // And real throttle position not needed for emul2
+      emul1.setRealThrottle(pos);
+
+      thr.hold(pos);
     } else {
       thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
     }

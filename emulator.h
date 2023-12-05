@@ -22,13 +22,19 @@ public:
     int value = analogRead(_emulatorPin);
     float raw = (float)(value * baseVoltage) / 1024;
 
-    _voltage += (raw - _voltage) * 0.001;
+    // Close faster, open slower
+    float voltageCoeff = 0.001;
+    if (raw < _voltage) {
+      voltageCoeff = 0.01;
+    }
+
+    _voltage += (raw - _voltage) * voltageCoeff;
 
     _throttlePos = _voltage * 100 / baseVoltage;
 
     if (_throttlePos == 1) {
       _throttlePos = 0;
-    } else if (_throttlePos == 99) {
+    } else if (_throttlePos >= 98) {
       _throttlePos = 100;
     }
 
@@ -37,8 +43,6 @@ public:
         uint16_t delta = (throttleRPMDown - _throttlePos) * 10;
 
         delta *= ((millis() - _rpmChangedAt) / 100);
-
-        _rpmChangedAt = millis();
 
         if (delta > _rpm) {
           _rpm = minRPM;
@@ -52,14 +56,14 @@ public:
 
         delta *= ((millis() - _rpmChangedAt) / 100);
 
-        _rpmChangedAt = millis();
-
         if (_rpm + delta > maxRPM) {
           _rpm = maxRPM;
         } else {
           _rpm += delta;
         }
       }
+
+      _rpmChangedAt = millis();
     }
 
     return _sens.pressure();
@@ -72,6 +76,8 @@ public:
   uint8_t throttle() { return _throttlePos; }
   uint16_t rpm() { return _rpm; }
 
+  void setRealThrottle(uint8_t pos) { _throttleRealPos = pos; }
+
 private:
   Sensor _sens;
   const uint8_t _emulatorPin;
@@ -80,6 +86,7 @@ private:
   const uint16_t maxRPM = 5000;
 
   uint8_t _throttlePos;
+  uint8_t _throttleRealPos = 100;
 
   const float baseVoltage = 5.0;
 
