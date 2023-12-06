@@ -5,18 +5,14 @@ class Emulator {
 public:
   enum EmulatorType { BEFORE_THROTTLE = 1, AFTER_THROTTLE };
 
-  Emulator(uint8_t tempPin, uint8_t mapPin, int16_t mapCorrection,
-           uint8_t emulatorPin, EmulatorType type)
-      : _sens(tempPin, mapPin, mapCorrection), _emulatorPin(emulatorPin),
-        _rpmChange(100, true, false) {
+  Emulator(uint8_t emulatorPin, EmulatorType type)
+      : _emulatorPin(emulatorPin), _rpmChange(100, true, false), _type(type) {
     pinMode(_emulatorPin, INPUT);
     _rpm = minRPM;
     _rpmChangedAt = millis();
   }
 
-  float temperature() { return _sens.temperature(); }
-
-  float pressure() {
+  uint32_t pressure() {
     uint8_t _prevPos = _throttlePos;
 
     int value = analogRead(_emulatorPin);
@@ -66,23 +62,47 @@ public:
       _rpmChangedAt = millis();
     }
 
-    return _sens.pressure();
-  }
+    if (_rpm <= middleRPM) {
+      _efficiency =
+          minEfficiency + ((uint32_t)(_rpm - minRPM) *
+                           (uint32_t)(middleEfficiency - minEfficiency)) /
+                              (middleRPM - minRPM);
+    } else {
+      _efficiency =
+          middleEfficiency + ((uint32_t)(_rpm - middleRPM) *
+                              (uint32_t)(maxEfficiency - middleEfficiency)) /
+                                 (maxRPM - middleRPM);
+    }
 
-  float pressureInMM() { return _sens.pressureInMM(); }
-  float voltageMap() { return _sens.voltageMap(); }
-  float voltageTemp() { return _sens.voltageTemp(); }
+    _pressureClear =
+        normalPressure +
+        ((uint32_t)_efficiency * (uint32_t)(maxPressure - normalPressure)) /
+            100;
+
+    if (_type == BEFORE_THROTTLE) {
+      return normalPressure + ((uint32_t)(100 - _throttleRealPos) *
+                               (uint32_t)(_pressureClear - normalPressure)) /
+                                  100;
+
+    } else {
+      return closedPressure + ((uint32_t)_throttlePos *
+                               (uint32_t)(_pressureClear - closedPressure)) /
+                                  100;
+    }
+  }
 
   uint8_t throttle() { return _throttlePos; }
   uint16_t rpm() { return _rpm; }
+  uint16_t efficiency() { return _efficiency; }
+  uint32_t pressureClear() { return _pressureClear; }
 
   void setRealThrottle(uint8_t pos) { _throttleRealPos = pos; }
 
 private:
-  Sensor _sens;
   const uint8_t _emulatorPin;
 
   const uint16_t minRPM = 850;
+  const uint16_t middleRPM = 2000;
   const uint16_t maxRPM = 5000;
 
   uint8_t _throttlePos;
@@ -98,4 +118,17 @@ private:
 
   const uint8_t throttleRPMDown = 10;
   const uint8_t throttleRPMUp = 20;
+
+  const EmulatorType _type;
+
+  const uint32_t closedPressure = 60000;
+  const uint32_t normalPressure = 100000;
+  const uint32_t maxPressure = 180000;
+
+  const uint8_t minEfficiency = 5;
+  const uint8_t middleEfficiency = 50;
+  const uint8_t maxEfficiency = 80;
+
+  uint8_t _efficiency;
+  uint32_t _pressureClear;
 };

@@ -22,12 +22,13 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = false;
+const bool LOG_SENSOR = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = true;
+const bool LOG_EMULATOR_INTERNAL = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
@@ -65,10 +66,8 @@ const bool USE_EMULATOR = true;
 
 const uint8_t EMULATOR_PIN = A5;
 
-Emulator emul1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection, EMULATOR_PIN,
-               Emulator::BEFORE_THROTTLE);
-Emulator emul2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection, EMULATOR_PIN,
-               Emulator::AFTER_THROTTLE);
+Emulator emul1(EMULATOR_PIN, Emulator::BEFORE_THROTTLE);
+Emulator emul2(EMULATOR_PIN, Emulator::AFTER_THROTTLE);
 
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
@@ -97,14 +96,12 @@ void setup() {
 void loop() {
   if (!failed && !poweredoff) {
     if (USE_EMULATOR) {
-      uint8_t pos = cntrl.percent(emul1.pressure(), emul2.pressure());
-
       // Set pos only for emul1 sensor (before throttle), because pressure for
       // emul2 sensor calced with emulated throttle position
       // And real throttle position not needed for emul2
-      emul1.setRealThrottle(pos);
+      emul1.setRealThrottle(thr.position());
 
-      thr.hold(pos);
+      thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
     } else {
       thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
     }
@@ -166,11 +163,19 @@ void log() {
   }
 
   if (LOG_SENSOR) {
-    Serial.print(">sens1 pressure (pa):");
-    Serial.println(sens1.pressure());
+    if (USE_EMULATOR) {
+      Serial.print(">sens1 emulated pressure (pa):");
+      Serial.println(emul1.pressure());
 
-    Serial.print(">sens2 pressure (pa):");
-    Serial.println(sens2.pressure());
+      Serial.print(">sens2 emulated pressure (pa):");
+      Serial.println(emul2.pressure());
+    } else {
+      Serial.print(">sens1 pressure (pa):");
+      Serial.println(sens1.pressure());
+
+      Serial.print(">sens2 pressure (pa):");
+      Serial.println(sens2.pressure());
+    }
   }
 
   if (LOG_SENSOR_RAW) {
@@ -191,10 +196,10 @@ void log() {
   }
 
   if (LOG_THROTTLE) {
-    Serial.print(">pos1:");
+    Serial.print(">throttle 1 pos:");
     Serial.println(thr.position1());
 
-    Serial.print(">pos2:");
+    Serial.print(">throttle 2 pos:");
     Serial.println(thr.position2());
   }
 
@@ -244,5 +249,13 @@ void log() {
 
     Serial.print(">emulator rpm:");
     Serial.println(emul1.rpm());
+  }
+
+  if (USE_EMULATOR && LOG_EMULATOR_INTERNAL) {
+    Serial.print(">emulator efficiency:");
+    Serial.println(emul1.efficiency());
+
+    Serial.print(">emulator pressure clear:");
+    Serial.println(emul1.pressureClear());
   }
 }
