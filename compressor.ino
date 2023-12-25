@@ -6,7 +6,7 @@
 #include "errors.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
-// #include "sensor.h"
+#include "sensor.h"
 #include "switch.h"
 #include "temperature_control.h"
 #include "throttle.h"
@@ -22,13 +22,13 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = true;
+const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = false;
+const bool LOG_THROTTLE = true;
 const bool LOG_THROTTLE_RAW = false;
-const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_EMULATOR = true;
-const bool LOG_EMULATOR_INTERNAL = true;
+const bool LOG_THROTTLE_INTERNAL = true;
+const bool LOG_EMULATOR = false;
+const bool LOG_EMULATOR_INTERNAL = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;

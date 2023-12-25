@@ -1,4 +1,3 @@
-#include "sensor.h"
 #include <TimerMs.h>
 
 class Emulator {
