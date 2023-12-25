@@ -357,6 +357,7 @@ public:
         _holdSpeedChanged = millis();
       } else {
         _holdReached = true;
+        stop();
       }
 
       return;
@@ -373,6 +374,7 @@ public:
       _holdPositionFinal = pos;
       _holdStartAt = millis();
       _holdReached = true;
+      stop();
       _holdSpeed = speedLow;
       _holdSpeedChanged = millis();
       return;
