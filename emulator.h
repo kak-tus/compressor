@@ -14,23 +14,23 @@ public:
   uint32_t pressure() {
     uint8_t _prevPos = _throttlePos;
 
-    int value = analogRead(_emulatorPin);
-    float raw = (float)(value * baseVoltage) / 1024;
+    uint16_t value = analogRead(_emulatorPin);
 
     // Close faster, open slower
     float voltageCoeff = 0.001;
-    if (raw < _voltage) {
+    if (value < _voltage) {
       voltageCoeff = 0.01;
     }
 
-    _voltage += (raw - _voltage) * voltageCoeff;
+    _voltage += (value - _voltage) * voltageCoeff;
 
-    _throttlePos = _voltage * 100 / baseVoltage;
-
-    if (_throttlePos == 1) {
+    if (_voltage < minVoltage + delta) {
       _throttlePos = 0;
-    } else if (_throttlePos >= 98) {
+    } else if (_voltage > maxVoltage + delta) {
       _throttlePos = 100;
+    } else {
+      _throttlePos =
+          (uint32_t)(_voltage - minVoltage) * 100 / (maxVoltage - minVoltage);
     }
 
     if (_rpmChange.tick()) {
@@ -107,9 +107,7 @@ private:
   uint8_t _throttlePos;
   uint8_t _throttleRealPos = 100;
 
-  const float baseVoltage = 5.0;
-
-  float _voltage;
+  uint16_t _voltage;
 
   uint16_t _rpm;
   TimerMs _rpmChange;
@@ -130,4 +128,11 @@ private:
 
   uint8_t _efficiency;
   uint32_t _pressureClear;
+
+  // Use delta to guarantee get 100% open and 0% close
+  const uint8_t delta = 2;
+
+  // Max voltage as native integer data
+  const uint16_t maxVoltage = 1024;
+  const uint16_t minVoltage = 0;
 };

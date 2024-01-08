@@ -1,12 +1,12 @@
 class TemperatureControl {
 public:
-  TemperatureControl(uint8_t controlPin, float onTemp, float offTemp)
+  TemperatureControl(uint8_t controlPin, int8_t onTemp, int8_t offTemp)
       : _pin(controlPin), _onTemp(onTemp), _offTemp(offTemp) {
     pinMode(_pin, OUTPUT);
     digitalWrite(_pin, OFF);
   }
 
-  void control(float temp) {
+  void control(int16_t temp) {
     if (temp > _onTemp) {
       if (_on) {
         return;
@@ -37,7 +37,7 @@ public:
 
 private:
   const uint8_t _pin;
-  const float _onTemp, _offTemp;
+  const int8_t _onTemp, _offTemp;
 
   const uint8_t ON = LOW;
   const uint8_t OFF = HIGH;

@@ -12,15 +12,14 @@ public:
   }
 
   uint8_t position1() {
-    int value = analogRead(_pos1Pin);
-    _voltagePos1 = (float)(value * baseVoltage) / 1024;
+    _voltagePos1 = analogRead(_pos1Pin);
 
-    if (_voltagePos1 < minVoltageSens1) {
+    if (_voltagePos1 < minVoltageSens1 + delta) {
       _pos1 = 0;
-    } else if (_voltagePos1 > maxVoltageSens1) {
+    } else if (_voltagePos1 > maxVoltageSens1 - delta) {
       _pos1 = 100;
     } else {
-      _pos1 = (_voltagePos1 - minVoltageSens1) * 100 /
+      _pos1 = (uint32_t)(_voltagePos1 - minVoltageSens1) * 100 /
               (maxVoltageSens1 - minVoltageSens1);
     }
 
@@ -28,15 +27,14 @@ public:
   }
 
   uint8_t position2() {
-    int value = analogRead(_pos2Pin);
-    _voltagePos2 = (float)(value * baseVoltage) / 1024;
+    _voltagePos2 = analogRead(_pos2Pin);
 
-    if (_voltagePos2 < minVoltageSens2) {
+    if (_voltagePos2 < minVoltageSens2 + delta) {
       _pos2 = 0;
-    } else if (_voltagePos2 > maxVoltageSens2) {
+    } else if (_voltagePos2 > maxVoltageSens2 - delta) {
       _pos2 = 100;
     } else {
-      _pos2 = (_voltagePos2 - minVoltageSens2) * 100 /
+      _pos2 = (uint32_t)(_voltagePos2 - minVoltageSens2) * 100 /
               (maxVoltageSens2 - minVoltageSens2);
     }
 
@@ -45,8 +43,8 @@ public:
 
   uint8_t position() { return position1(); }
 
-  float voltagePosition1() { return _voltagePos1; }
-  float voltagePosition2() { return _voltagePos2; }
+  uint16_t voltagePosition1() { return _voltagePos1; }
+  uint16_t voltagePosition2() { return _voltagePos2; }
 
   uint8_t status() { return uint8_t(_status); }
   uint8_t speed() { return _currentSpeed; }
@@ -438,17 +436,17 @@ public:
 
 private:
   const uint8_t _pos1Pin, _pos2Pin;
-  float _voltagePos1, _voltagePos2;
+  uint16_t _voltagePos1, _voltagePos2;
   uint8_t _pos1, _pos2;
 
-  const float baseVoltage = 5.0;
-
   // Use delta to guarantee get 100% open and 0% close
-  const float delta = 0.06;
-  const float maxVoltageSens1 = 4.54 - delta;
-  const float minVoltageSens1 = 0.68 + delta;
-  const float maxVoltageSens2 = 4.35 - delta;
-  const float minVoltageSens2 = 0.49 + delta;
+  const uint8_t delta = 2;
+
+  // Max voltage as native integer data
+  const uint16_t maxVoltageSens1 = 929;
+  const uint16_t minVoltageSens1 = 139;
+  const uint16_t maxVoltageSens2 = 890;
+  const uint16_t minVoltageSens2 = 100;
 
   const uint8_t sensorsOkDelta = 4;
 

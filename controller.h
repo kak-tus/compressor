@@ -41,7 +41,7 @@ public:
     return _percent;
   }
 
-  void setTemperature(uint8_t temperature) {
+  void setTemperature(uint16_t temperature) {
     if (temperature > boostOffTemperature) {
       _minPercent = 100;
       _minPercentChanged = millis();

@@ -22,22 +22,22 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = false;
-const bool LOG_SENSOR_RAW = false;
+const bool LOG_SENSOR = true;
+const bool LOG_SENSOR_RAW = true;
 const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_EMULATOR = true;
-const bool LOG_EMULATOR_INTERNAL = true;
+const bool LOG_EMULATOR = false;
+const bool LOG_EMULATOR_INTERNAL = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
 
-const float PUMP_ON_TEMPERATURE = 20.0;
-const float PUMP_OFF_TEMPERATURE = 19.0;
+const uint8_t PUMP_ON_TEMPERATURE = 20;
+const uint8_t PUMP_OFF_TEMPERATURE = 19;
 
-const float COOLER_ON_TEMPERATURE = 21.0;
-const float COOLER_OFF_TEMPERATURE = 20.0;
+const uint8_t COOLER_ON_TEMPERATURE = 21;
+const uint8_t COOLER_OFF_TEMPERATURE = 20;
 
 const uint8_t EN_PIN = 3;
 const uint8_t R_PWM_PIN = 6;
@@ -62,7 +62,7 @@ Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
 // Sensor 2 - out sensor, after throttle
 Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
-const bool USE_EMULATOR = true;
+const bool USE_EMULATOR = false;
 
 const uint8_t EMULATOR_PIN = A5;
 
@@ -150,7 +150,7 @@ void loop() {
   }
 
   if (heatCheck.tick() && !failed && !poweredoff) {
-    float temp = sens1.temperature();
+    int16_t temp = sens1.temperature();
 
     tControlPump.control(temp);
     tControlCooler.control(temp);
