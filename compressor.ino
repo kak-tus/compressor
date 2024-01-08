@@ -24,11 +24,11 @@ const uint8_t THROTTLE_POSITION2_PIN = A2;
 const bool LOG_TEMPERATURE = false;
 const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = true;
+const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
-const bool LOG_THROTTLE_INTERNAL = true;
-const bool LOG_EMULATOR = false;
-const bool LOG_EMULATOR_INTERNAL = false;
+const bool LOG_THROTTLE_INTERNAL = false;
+const bool LOG_EMULATOR = true;
+const bool LOG_EMULATOR_INTERNAL = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
@@ -89,7 +89,10 @@ const uint8_t COMPRESSOR_PIN = 4;
 Switch compressor(COMPRESSOR_PIN);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+
+  cntrl.setNormalPressure(sens1.pressure());
+
   thr.check();
 }
 
