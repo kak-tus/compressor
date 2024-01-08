@@ -443,10 +443,10 @@ private:
   const uint8_t delta = 2;
 
   // Max voltage as native integer data
-  const uint16_t maxVoltageSens1 = 929;
-  const uint16_t minVoltageSens1 = 139;
-  const uint16_t maxVoltageSens2 = 890;
-  const uint16_t minVoltageSens2 = 100;
+  const uint16_t maxVoltageSens1 = 934;
+  const uint16_t minVoltageSens1 = 146;
+  const uint16_t maxVoltageSens2 = 874;
+  const uint16_t minVoltageSens2 = 91;
 
   const uint8_t sensorsOkDelta = 4;
 
