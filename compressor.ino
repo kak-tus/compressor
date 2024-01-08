@@ -22,12 +22,12 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = false;
+const bool LOG_SENSOR = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_THROTTLE = true;
-const bool LOG_THROTTLE_RAW = true;
+const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_EMULATOR = false;
+const bool LOG_EMULATOR = true;
 const bool LOG_EMULATOR_INTERNAL = false;
 
 const uint8_t PUMP_PIN = 7;
@@ -62,7 +62,7 @@ Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
 // Sensor 2 - out sensor, after throttle
 Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
-const bool USE_EMULATOR = false;
+const bool USE_EMULATOR = true;
 
 const uint8_t EMULATOR_PIN = A5;
 
@@ -260,5 +260,8 @@ void log() {
 
     Serial.print(">emulator pressure clear:");
     Serial.println(emul1.pressureClear());
+
+    Serial.print(">emulator voltage:");
+    Serial.println(emul1.voltage());
   }
 }

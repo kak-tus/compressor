@@ -8,8 +8,6 @@ public:
   }
 
   uint8_t percent(uint32_t pressure1, uint32_t pressure2) {
-    return 0;
-
     // if (pressure1 < pressure2) {
     //   // TODO add error
     //   // It is not normal situation

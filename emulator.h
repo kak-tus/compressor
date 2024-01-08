@@ -12,21 +12,13 @@ public:
   }
 
   uint32_t pressure() {
-    uint8_t _prevPos = _throttlePos;
+    uint8_t _prevVoltage = _voltage;
 
-    uint16_t value = analogRead(_emulatorPin);
-
-    // Close faster, open slower
-    float voltageCoeff = 0.001;
-    if (value < _voltage) {
-      voltageCoeff = 0.01;
-    }
-
-    _voltage += (value - _voltage) * voltageCoeff;
+    _voltage = analogRead(_emulatorPin);
 
     if (_voltage < minVoltage + delta) {
       _throttlePos = 0;
-    } else if (_voltage > maxVoltage + delta) {
+    } else if (_voltage > maxVoltage - delta) {
       _throttlePos = 100;
     } else {
       _throttlePos =
@@ -94,6 +86,7 @@ public:
   uint16_t rpm() { return _rpm; }
   uint16_t efficiency() { return _efficiency; }
   uint32_t pressureClear() { return _pressureClear; }
+  uint16_t voltage() { return _voltage; }
 
   void setRealThrottle(uint8_t pos) { _throttleRealPos = pos; }
 
@@ -133,6 +126,6 @@ private:
   const uint8_t delta = 2;
 
   // Max voltage as native integer data
-  const uint16_t maxVoltage = 1024;
-  const uint16_t minVoltage = 0;
+  const uint16_t maxVoltage = 1017;
+  const uint16_t minVoltage = 8;
 };
