@@ -70,6 +70,26 @@ public:
     return false;
   }
 
+  void _fail(uint8_t code) {
+    Serial.print("Fail data:");
+    Serial.print(" pos1=");
+    Serial.print(_pos1);
+    Serial.print(" pos2=");
+    Serial.print(_pos2);
+    Serial.print(" voltagePos1=");
+    Serial.print(_voltagePos1);
+    Serial.print(" voltagePos2=");
+    Serial.print(_voltagePos2);
+    Serial.println("");
+
+    _failed = true;
+    _failStateCode = code;
+
+    syncOpen();
+
+    _motor.Disable();
+  }
+
   void check() {
     _motor.Enable();
 
@@ -81,18 +101,12 @@ public:
       delay(1);
 
       if (!sensorsOk()) {
-        _failed = true;
-        _failStateCode = 1;
-        syncOpen();
-        _motor.Disable();
+        _fail(1);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _failed = true;
-        _failStateCode = 2;
-        syncOpen();
-        _motor.Disable();
+        _fail(2);
         return;
       }
     }
@@ -108,18 +122,12 @@ public:
       delay(1);
 
       if (!sensorsOk()) {
-        _failed = true;
-        _failStateCode = 3;
-        syncOpen();
-        _motor.Disable();
+        _fail(3);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _failed = true;
-        _failStateCode = 4;
-        syncOpen();
-        _motor.Disable();
+        _fail(4);
         return;
       }
     }
@@ -135,18 +143,12 @@ public:
       delay(1);
 
       if (!sensorsOk()) {
-        _failed = true;
-        _failStateCode = 5;
-        syncOpen();
-        _motor.Disable();
+        _fail(5);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _failed = true;
-        _failStateCode = 6;
-        syncOpen();
-        _motor.Disable();
+        _fail(6);
         return;
       }
     }
@@ -442,7 +444,7 @@ private:
   const float baseVoltage = 5.0;
 
   // Use delta to guarantee get 100% open and 0% close
-  const float delta = 0.04;
+  const float delta = 0.06;
   const float maxVoltageSens1 = 4.54 - delta;
   const float minVoltageSens1 = 0.68 + delta;
   const float maxVoltageSens2 = 4.35 - delta;
