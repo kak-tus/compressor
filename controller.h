@@ -18,26 +18,60 @@ public:
     // With closed throttle
     if (pressure2 <= closedPressure) {
       // No need in high pressure1 if it bigger, then normal pressure
-      if (pressure1 > _normalPressure + pressureDelta && _percent < 100 &&
+      if (pressure1 > _normalPressure + pressureOver &&
           timeout(_percentChanged, 100)) {
-        _percent++;
-        _percentChanged = millis();
+        incPercent();
       }
 
       return _percent;
     }
 
     if (pressure2 >= limitPressure) {
-      if (pressure1 > limitPressure + pressureDelta && _percent < 100 &&
+      if (pressure1 > limitPressure + pressureOver &&
           timeout(_percentChanged, 100)) {
-        _percent++;
-        _percentChanged = millis();
+        incPercent();
+      }
+
+      return _percent;
+    }
+
+    uint32_t neededPressure = pressure2 + pressureOver;
+
+    if (pressure1 < neededPressure) {
+      if (timeout(_percentChanged, 100)) {
+        decPercent();
+      }
+
+      return _percent;
+    } else if (pressure1 > neededPressure) {
+      if (timeout(_percentChanged, 100)) {
+        incPercent();
       }
 
       return _percent;
     }
 
     return _percent;
+  }
+
+  void incPercent() {
+    _percentChanged = millis();
+
+    if (_percent >= 100) {
+      return;
+    }
+
+    _percent++;
+  }
+
+  void decPercent() {
+    _percentChanged = millis();
+
+    if (_percent == 0) {
+      return;
+    }
+
+    _percent--;
   }
 
   void setTemperature(uint16_t temperature) {
@@ -70,8 +104,9 @@ public:
 
 private:
   const uint32_t closedPressure = 60000;
-  const uint32_t limitPressure = 115000;
-  const uint32_t pressureDelta = 5000;
+  const uint32_t limitPressure = 125000;
+  const uint32_t pressureDelta = 2000;
+  const uint32_t pressureOver = 2000;
 
   const uint8_t boostOffTemperature = 80;
   const uint8_t boostLowerTemperature = 75;
