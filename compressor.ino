@@ -91,7 +91,9 @@ Switch compressor(COMPRESSOR_PIN);
 void setup() {
   Serial.begin(115200);
 
-  cntrl.setNormalPressure(sens1.pressure());
+  if (!USE_EMULATOR) {
+    cntrl.setNormalPressure(sens1.pressure());
+  }
 
   thr.check();
 }
@@ -99,10 +101,8 @@ void setup() {
 void loop() {
   if (!failed && !poweredoff) {
     if (USE_EMULATOR) {
-      // Set pos only for emul1 sensor (before throttle), because pressure for
-      // emul2 sensor calced with emulated throttle position
-      // And real throttle position not needed for emul2
       emul1.setRealThrottle(thr.position());
+      emul2.setRealThrottle(thr.position());
 
       thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
     } else {

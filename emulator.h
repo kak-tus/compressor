@@ -70,14 +70,16 @@ public:
         ((uint32_t)_efficiency * (uint32_t)(maxPressure - normalPressure)) /
             100;
 
-    if (_type == BEFORE_THROTTLE) {
-      return normalPressure + ((uint32_t)(100 - _throttleRealPos) *
-                               (uint32_t)(_pressureClear - normalPressure)) /
-                                  100;
+    uint32_t _pressureBefore =
+        normalPressure + ((uint32_t)(100 - _throttleRealPos) *
+                          (uint32_t)(_pressureClear - normalPressure)) /
+                             100;
 
+    if (_type == BEFORE_THROTTLE) {
+      return _pressureBefore;
     } else {
       return closedPressure + ((uint32_t)_throttlePos *
-                               (uint32_t)(_pressureClear - closedPressure)) /
+                               (uint32_t)(_pressureBefore - closedPressure)) /
                                   100;
     }
   }
@@ -126,6 +128,6 @@ private:
   const uint8_t delta = 2;
 
   // Max voltage as native integer data
-  const uint16_t maxVoltage = 1017;
+  const uint16_t maxVoltage = 990;
   const uint16_t minVoltage = 8;
 };
