@@ -1,6 +1,7 @@
 #include <BTS7960.h>
 #include <TimerMs.h>
 
+#include "calibrate.h"
 #include "controller.h"
 #include "emulator.h"
 #include "errors.h"
@@ -88,6 +89,9 @@ const uint8_t COMPRESSOR_PIN = 4;
 
 Switch compressor(COMPRESSOR_PIN);
 
+const bool USE_CALIBRATE = true;
+Calibrate clbr;
+
 void setup() {
   Serial.begin(115200);
 
@@ -104,9 +108,17 @@ void loop() {
       emul1.setRealThrottle(thr.position());
       emul2.setRealThrottle(thr.position());
 
-      thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
+      if (USE_CALIBRATE) {
+        thr.hold(clbr.percent());
+      } else {
+        thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
+      }
     } else {
-      thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
+      if (USE_CALIBRATE) {
+        thr.hold(clbr.percent());
+      } else {
+        thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
+      }
     }
   }
 
