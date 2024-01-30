@@ -82,6 +82,32 @@ public:
   directionType direction() { return _direction; }
   bool reached() { return _reached; }
 
+  bool isPressure2Up(uint32_t pressure2) {
+    if (_previousPressure2_1 == 0) {
+      return false;
+    }
+
+    if (_previousPressure2_1 < _previousPressure2_2 + pressureDelta &&
+        _previousPressure2_2 < pressure2 + pressureDelta) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool isPressure2Down(uint32_t pressure2) {
+    if (_previousPressure2_1 == 0) {
+      return false;
+    }
+
+    if (pressure2 < _previousPressure2_1 + pressureDelta &&
+        _previousPressure2_1 < _previousPressure2_2 + pressureDelta) {
+      return true;
+    }
+
+    return false;
+  }
+
 private:
   bool timeout(unsigned long start, uint16_t operationLimit) {
     if (millis() - start < operationLimit) {
@@ -117,32 +143,6 @@ private:
     }
 
     _percent--;
-  }
-
-  bool isPressure2Up(uint32_t pressure2) {
-    if (_previousPressure2_1 == 0) {
-      return false;
-    }
-
-    if (_previousPressure2_1 < _previousPressure2_2 + pressureDelta &&
-        _previousPressure2_2 < pressure2 + pressureDelta) {
-      return true;
-    }
-
-    return false;
-  }
-
-  bool isPressure2Down(uint32_t pressure2) {
-    if (_previousPressure2_1 == 0) {
-      return false;
-    }
-
-    if (pressure2 < _previousPressure2_1 + pressureDelta &&
-        _previousPressure2_1 < _previousPressure2_2 + pressureDelta) {
-      return true;
-    }
-
-    return false;
   }
 
   void setPreviousPressure2(uint32_t pressure2) {

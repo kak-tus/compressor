@@ -290,5 +290,23 @@ void log() {
 
     Serial.print(">controller reached:");
     Serial.println(cntrl.reached());
+
+    if (USE_EMULATOR) {
+      uint32_t pressure2 = emul2.pressure();
+
+      Serial.print(">controller is pressure2 up:");
+      Serial.println(cntrl.isPressure2Up(pressure2));
+
+      Serial.print(">controller is pressure2 down:");
+      Serial.println(cntrl.isPressure2Down(pressure2));
+    } else {
+      uint32_t pressure2 = sens2.pressure();
+
+      Serial.print(">controller is pressure2 up:");
+      Serial.println(cntrl.isPressure2Up(pressure2));
+
+      Serial.print(">controller is pressure2 down:");
+      Serial.println(cntrl.isPressure2Down(pressure2));
+    }
   }
 }
