@@ -286,18 +286,25 @@ public:
     // Close slower, then open
     // to do smooth boost
     if (_holdPositionWant < _holdPositionFinal) {
-      _holdPositionWant = _holdPositionStart + (millis() - _holdStartAt) / 10;
-      if (_holdPositionWant > _holdPositionFinal) {
+      unsigned long _newWant =
+          (unsigned long)_holdPositionStart + (millis() - _holdStartAt) / 10;
+
+      if (_newWant > _holdPositionFinal) {
         _holdPositionWant = _holdPositionFinal;
+      } else {
+        _holdPositionWant = _newWant;
       }
 
       _holdReached = false;
       _holdSpeed = speedLow;
       _holdSpeedChanged = millis();
     } else if (_holdPositionWant > _holdPositionFinal) {
-      _holdPositionWant = _holdPositionStart - (millis() - _holdStartAt) / 100;
-      if (_holdPositionWant < _holdPositionFinal) {
+      unsigned long _newWant = (millis() - _holdStartAt) / 100;
+
+      if (_newWant > _holdPositionStart) {
         _holdPositionWant = _holdPositionFinal;
+      } else {
+        _holdPositionWant = _holdPositionStart - _newWant;
       }
 
       _holdReached = false;
@@ -380,35 +387,50 @@ public:
       return;
     }
 
-    if (_holdDirection == OPEN) {
+    if (_holdReached) {
+      _holdPositionStart = _currPos;
+      _holdPositionFinal = pos;
+      _holdStartAt = millis();
+      _holdReached = false;
+      _holdSpeed = speedLow;
+      _holdSpeedChanged = millis();
+
       if (_currPos < pos) {
-        // Continue open
-        _holdPositionFinal = pos;
-        _holdReached = false;
-      } else {
-        // Direction changed
-        _holdPositionStart = _currPos;
-        _holdPositionFinal = pos;
-        _holdStartAt = millis();
-        _holdDirection = CLOSE;
-        _holdReached = false;
-        _holdSpeed = speedLow;
-        _holdSpeedChanged = millis();
-      }
-    } else if (_holdDirection == CLOSE) {
-      if (_currPos > pos) {
-        // Continue close
-        _holdPositionFinal = pos;
-        _holdReached = false;
-      } else {
-        // Direction changed
-        _holdPositionStart = _currPos;
-        _holdPositionFinal = pos;
-        _holdStartAt = millis();
         _holdDirection = OPEN;
-        _holdReached = false;
-        _holdSpeed = speedLow;
-        _holdSpeedChanged = millis();
+      } else {
+        _holdDirection = CLOSE;
+      }
+    } else {
+      if (_holdDirection == OPEN) {
+        if (_currPos < pos) {
+          // Continue open
+          _holdPositionFinal = pos;
+          _holdReached = false;
+        } else {
+          // Direction changed
+          _holdPositionStart = _currPos;
+          _holdPositionFinal = pos;
+          _holdStartAt = millis();
+          _holdDirection = CLOSE;
+          _holdReached = false;
+          _holdSpeed = speedLow;
+          _holdSpeedChanged = millis();
+        }
+      } else if (_holdDirection == CLOSE) {
+        if (_currPos > pos) {
+          // Continue close
+          _holdPositionFinal = pos;
+          _holdReached = false;
+        } else {
+          // Direction changed
+          _holdPositionStart = _currPos;
+          _holdPositionFinal = pos;
+          _holdStartAt = millis();
+          _holdDirection = OPEN;
+          _holdReached = false;
+          _holdSpeed = speedLow;
+          _holdSpeedChanged = millis();
+        }
       }
     }
   }
