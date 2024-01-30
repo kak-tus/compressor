@@ -1,5 +1,7 @@
 class Controller {
 public:
+  enum directionType { OPEN, CLOSE };
+
   Controller() {
     // Don't use real initial percent
     // this controller control how MUST be percent set, but not real percent
@@ -8,70 +10,51 @@ public:
   }
 
   uint8_t percent(uint32_t pressure1, uint32_t pressure2) {
-    // if (pressure1 < pressure2) {
-    //   // TODO add error
-    //   // It is not normal situation
-    //   // Possible sensor error
-    //   return 100;
-    // }
+    setPreviousPressure2(pressure2);
 
-    // With closed throttle
-    if (pressure2 <= closedPressure) {
-      // No need in high pressure1 if it bigger, then normal pressure
-      if (pressure1 > _normalPressure + pressureOver &&
-          timeout(_percentChanged, 100)) {
-        incPercent();
+    if (timeout(_pressure1WantChanged, 100)) {
+      if (isPressure2Up(pressure2)) {
+        _pressure1Want = maxPressure;
+        _pressure1WantChanged = millis();
+      } else if (isPressure2Down(pressure2)) {
+        _pressure1Want = pressure2 + pressureOver;
+        _pressure1WantChanged = millis();
       }
 
-      return _percent;
-    }
-
-    if (pressure2 >= limitPressure) {
-      if (pressure1 > limitPressure + pressureOver &&
-          timeout(_percentChanged, 100)) {
-        incPercent();
+      // With closed throttle
+      // No need in high boost
+      // Hold little overboost on normal pressure
+      if (pressure2 <= closedPressure) {
+        _pressure1Want = _normalPressure + pressureOver;
+        _pressure1WantChanged = millis();
       }
 
-      return _percent;
+      // Limit, need lower boost
+      if (pressure2 >= limitPressure + pressureOver) {
+        _pressure1Want = limitPressure + pressureOver;
+        _pressure1WantChanged = millis();
+      }
     }
 
-    uint32_t neededPressure = pressure2 + pressureOver;
+    if (pressure1 < _pressure1Want - pressureDelta) {
+      _direction = CLOSE;
+      _reached = false;
+    } else if (pressure1 > _pressure1Want + pressureDelta) {
+      _direction = OPEN;
+      _reached = false;
+    } else {
+      _reached = true;
+    }
 
-    if (pressure1 < neededPressure) {
-      if (timeout(_percentChanged, 100)) {
+    if (!_reached) {
+      if (_direction == OPEN) {
+        incPercent();
+      } else if (_direction == CLOSE) {
         decPercent();
       }
-
-      return _percent;
-    } else if (pressure1 > neededPressure) {
-      if (timeout(_percentChanged, 100)) {
-        incPercent();
-      }
-
-      return _percent;
     }
 
     return _percent;
-  }
-
-  void incPercent() {
-    _percentChanged = millis();
-
-    if (_percent >= 100) {
-      return;
-    }
-
-    _percent++;
-  }
-
-  void decPercent() {
-    _percentChanged = millis();
-
-    if (_percent == 0) {
-      return;
-    }
-
-    _percent--;
   }
 
   void setTemperature(uint16_t temperature) {
@@ -92,6 +75,14 @@ public:
     }
   }
 
+  void setNormalPressure(uint32_t pressure) { _normalPressure = pressure; }
+
+  uint32_t pressure1Want() { return _pressure1Want; }
+  uint8_t percentVal() { return _percent; }
+  directionType direction() { return _direction; }
+  bool reached() { return _reached; }
+
+private:
   bool timeout(unsigned long start, uint16_t operationLimit) {
     if (millis() - start < operationLimit) {
       return false;
@@ -100,18 +91,89 @@ public:
     return true;
   }
 
-  void setNormalPressure(uint32_t pressure) { _normalPressure = pressure; }
+  void incPercent() {
+    if (!timeout(_percentChanged, 50)) {
+      return;
+    }
 
-private:
-  const uint32_t closedPressure = 60000;
-  const uint32_t limitPressure = 125000;
-  const uint32_t pressureDelta = 2000;
+    _percentChanged = millis();
+
+    if (_percent >= 100) {
+      return;
+    }
+
+    _percent++;
+  }
+
+  void decPercent() {
+    if (!timeout(_percentChanged, 100)) {
+      return;
+    }
+
+    _percentChanged = millis();
+
+    if (_percent == 0) {
+      return;
+    }
+
+    _percent--;
+  }
+
+  bool isPressure2Up(uint32_t pressure2) {
+    if (_previousPressure2_1 == 0) {
+      return false;
+    }
+
+    if (_previousPressure2_1 < _previousPressure2_2 + pressureDelta &&
+        _previousPressure2_2 < pressure2 + pressureDelta) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool isPressure2Down(uint32_t pressure2) {
+    if (_previousPressure2_1 == 0) {
+      return false;
+    }
+
+    if (pressure2 < _previousPressure2_1 + pressureDelta &&
+        _previousPressure2_1 < _previousPressure2_2 + pressureDelta) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void setPreviousPressure2(uint32_t pressure2) {
+    if (!timeout(_previousPressure2Changed, 100)) {
+      return;
+    }
+
+    _previousPressure2_1 = _previousPressure2_2;
+    _previousPressure2_2 = pressure2;
+  }
+
+  const uint32_t closedPressure = 62000;
+  const uint32_t limitPressure = 115000;
+  const uint32_t pressureDelta = 1000;
   const uint32_t pressureOver = 2000;
+  const uint32_t maxPressure = 180000;
 
   const uint8_t boostOffTemperature = 80;
   const uint8_t boostLowerTemperature = 75;
 
+  uint32_t _normalPressure = 100000;
+
   uint8_t _percent, _minPercent;
-  unsigned long _percentChanged, _minPercentChanged;
-  uint32_t _normalPressure = 115000;
+  unsigned long _percentChanged, _minPercentChanged, _previousPressure2Changed;
+
+  uint32_t _pressure1Want;
+  unsigned long _pressure1WantChanged;
+
+  directionType _direction;
+
+  bool _reached;
+
+  uint32_t _previousPressure2_1, _previousPressure2_2;
 };

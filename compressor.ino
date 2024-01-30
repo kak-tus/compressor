@@ -25,11 +25,12 @@ const uint8_t THROTTLE_POSITION2_PIN = A2;
 const bool LOG_TEMPERATURE = false;
 const bool LOG_SENSOR = true;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = true;
+const bool LOG_THROTTLE = false;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = true;
 const bool LOG_EMULATOR_INTERNAL = false;
+const bool LOG_CONTROLLER = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
@@ -89,7 +90,7 @@ const uint8_t COMPRESSOR_PIN = 4;
 
 Switch compressor(COMPRESSOR_PIN);
 
-const bool USE_CALIBRATE = true;
+const bool USE_CALIBRATE = false;
 Calibrate clbr;
 
 void setup() {
@@ -275,5 +276,19 @@ void log() {
 
     Serial.print(">emulator voltage:");
     Serial.println(emul1.voltage());
+  }
+
+  if (LOG_CONTROLLER) {
+    Serial.print(">controller pressure 1 want:");
+    Serial.println(cntrl.pressure1Want());
+
+    Serial.print(">controller percent:");
+    Serial.println(cntrl.percentVal());
+
+    Serial.print(">controller direction:");
+    Serial.println(cntrl.direction());
+
+    Serial.print(">controller reached:");
+    Serial.println(cntrl.reached());
   }
 }
