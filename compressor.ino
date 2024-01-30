@@ -110,15 +110,15 @@ void loop() {
       emul2.setRealThrottle(thr.position());
 
       if (USE_CALIBRATE) {
-        thr.hold(clbr.percent());
+        thr.hold(clbr.position());
       } else {
-        thr.hold(cntrl.percent(emul1.pressure(), emul2.pressure()));
+        thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
       }
     } else {
       if (USE_CALIBRATE) {
-        thr.hold(clbr.percent());
+        thr.hold(clbr.position());
       } else {
-        thr.hold(cntrl.percent(sens1.pressure(), sens2.pressure()));
+        thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
       }
     }
   }
@@ -260,7 +260,7 @@ void log() {
   }
 
   if (USE_EMULATOR && LOG_EMULATOR) {
-    Serial.print(">emulator throttle pos:");
+    Serial.print(">emulator throttle position:");
     Serial.println(emul1.throttle());
 
     Serial.print(">emulator rpm:");
@@ -282,8 +282,8 @@ void log() {
     Serial.print(">controller pressure 1 want:");
     Serial.println(cntrl.pressure1Want());
 
-    Serial.print(">controller percent:");
-    Serial.println(cntrl.percentVal());
+    Serial.print(">controller position:");
+    Serial.println(cntrl.positionVal());
 
     Serial.print(">controller direction:");
     Serial.println(cntrl.direction());

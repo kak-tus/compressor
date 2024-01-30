@@ -1,6 +1,6 @@
 class Calibrate {
 public:
-  uint8_t percent() {
+  uint8_t position() {
     if (timeout(_changed, 30000)) {
       _changed = millis();
 

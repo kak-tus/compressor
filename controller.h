@@ -9,7 +9,7 @@ public:
     _percent = 100;
   }
 
-  uint8_t percent(uint32_t pressure1, uint32_t pressure2) {
+  uint8_t position(uint32_t pressure1, uint32_t pressure2) {
     setPreviousPressure2(pressure2);
 
     if (timeout(_pressure1WantChanged, 100)) {
@@ -78,7 +78,7 @@ public:
   void setNormalPressure(uint32_t pressure) { _normalPressure = pressure; }
 
   uint32_t pressure1Want() { return _pressure1Want; }
-  uint8_t percentVal() { return _percent; }
+  uint8_t positionVal() { return _percent; }
   directionType direction() { return _direction; }
   bool reached() { return _reached; }
 
