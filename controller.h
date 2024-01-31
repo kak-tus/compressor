@@ -87,8 +87,9 @@ public:
       return false;
     }
 
-    if (_previousPressure2_1 < _previousPressure2_2 + pressureUpDownDelta &&
-        _previousPressure2_2 < pressure2 + pressureUpDownDelta) {
+    if (_previousPressure2_1 < _previousPressure2_2 &&
+        _previousPressure2_2 < pressure2 &&
+        pressure2 - _previousPressure2_1 > pressureUpDownDelta) {
       return true;
     }
 
@@ -100,8 +101,9 @@ public:
       return false;
     }
 
-    if (pressure2 < _previousPressure2_1 + pressureUpDownDelta &&
-        _previousPressure2_1 < _previousPressure2_2 + pressureUpDownDelta) {
+    if (_previousPressure2_1 > _previousPressure2_2 &&
+        _previousPressure2_2 > pressure2 &&
+        _previousPressure2_1 - pressure2 > pressureUpDownDelta) {
       return true;
     }
 
@@ -150,6 +152,7 @@ private:
       return;
     }
 
+    _previousPressure2Changed = millis();
     _previousPressure2_1 = _previousPressure2_2;
     _previousPressure2_2 = pressure2;
   }
@@ -157,7 +160,7 @@ private:
   const uint32_t closedPressure = 62000;
   const uint32_t limitPressure = 115000;
   const uint32_t pressureDelta = 1000;
-  const uint32_t pressureUpDownDelta = 5000;
+  const uint32_t pressureUpDownDelta = 6000;
   const uint32_t pressureOver = 2000;
   const uint32_t maxPressure = 180000;
 
