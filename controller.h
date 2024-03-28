@@ -153,8 +153,12 @@ private:
     }
 
     _previousPressure2Changed = millis();
+
     _previousPressure2_1 = _previousPressure2_2;
+    _previousPressure2_1Changed = _previousPressure2_2Changed;
+
     _previousPressure2_2 = pressure2;
+    _previousPressure2_2Changed = millis();
   }
 
   const uint32_t closedPressure = 62000;
@@ -170,7 +174,7 @@ private:
   uint32_t _normalPressure = 100000;
 
   uint8_t _percent, _minPercent;
-  unsigned long _percentChanged, _minPercentChanged, _previousPressure2Changed;
+  unsigned long _percentChanged, _minPercentChanged;
 
   uint32_t _pressure1Want;
   unsigned long _pressure1WantChanged;
@@ -180,4 +184,6 @@ private:
   bool _reached;
 
   uint32_t _previousPressure2_1, _previousPressure2_2;
+  unsigned long _previousPressure2Changed, _previousPressure2_1Changed,
+      _previousPressure2_2Changed;
 };
