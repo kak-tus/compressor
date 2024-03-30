@@ -30,7 +30,7 @@ const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = true;
 const bool LOG_EMULATOR_INTERNAL = false;
-const bool LOG_CONTROLLER = true;
+const bool LOG_CONTROLLER = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 8;
