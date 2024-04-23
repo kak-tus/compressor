@@ -23,12 +23,12 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = true;
+const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_THROTTLE = true;
-const bool LOG_THROTTLE_RAW = false;
+const bool LOG_THROTTLE_RAW = true;
 const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_EMULATOR = true;
+const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER = false;
 
@@ -212,11 +212,8 @@ void log() {
   }
 
   if (LOG_THROTTLE) {
-    Serial.print(">throttle 1 pos:");
-    Serial.println(thr.position1());
-
-    Serial.print(">throttle 2 pos:");
-    Serial.println(thr.position2());
+    Serial.print(">throttle position:");
+    Serial.println(thr.position());
   }
 
   if (LOG_THROTTLE_RAW) {

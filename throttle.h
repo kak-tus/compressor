@@ -11,7 +11,7 @@ public:
     pinMode(_pos2Pin, INPUT);
   }
 
-  uint8_t position1() {
+  uint8_t position() {
     _voltagePos1 = analogRead(_pos1Pin);
 
     if (_voltagePos1 < minVoltageSens1 + delta) {
@@ -23,25 +23,19 @@ public:
               (maxVoltageSens1 - minVoltageSens1);
     }
 
-    return _pos1;
-  }
-
-  uint8_t position2() {
     _voltagePos2 = analogRead(_pos2Pin);
 
     if (_voltagePos2 < minVoltageSens2 + delta) {
-      _pos2 = 0;
-    } else if (_voltagePos2 > maxVoltageSens2 - delta) {
       _pos2 = 100;
+    } else if (_voltagePos2 > maxVoltageSens2 - delta) {
+      _pos2 = 0;
     } else {
-      _pos2 = (uint32_t)(_voltagePos2 - minVoltageSens2) * 100 /
-              (maxVoltageSens2 - minVoltageSens2);
+      _pos2 = 100 - (uint32_t)(_voltagePos2 - minVoltageSens2) * 100 /
+                        (maxVoltageSens2 - minVoltageSens2);
     }
 
-    return _pos2;
+    return _pos1;
   }
-
-  uint8_t position() { return position1(); }
 
   uint16_t voltagePosition1() { return _voltagePos1; }
   uint16_t voltagePosition2() { return _voltagePos2; }
@@ -135,8 +129,15 @@ public:
       return controlPoweroff();
     default:
       if (_openedCheck.tick()) {
-        // Periodically check that throttle was'n uncontrolled open
-        if (position() < 100) {
+        // Periodically check that throttle wasn't uncontrolled open
+        uint8_t _currPos = position();
+
+        if (!sensorsOk()) {
+          _fail(7);
+          return false;
+        }
+
+        if (_currPos < 100) {
           poweroff();
         }
       }
@@ -157,6 +158,11 @@ public:
       _motor.Enable();
 
       uint8_t _currPos = position();
+
+      if (!sensorsOk()) {
+        _fail(8);
+        return;
+      }
 
       _holdPositionWant = _currPos;
       _holdPositionStart = _currPos;
@@ -186,6 +192,11 @@ public:
     }
 
     uint8_t _currPos = position();
+
+    if (!sensorsOk()) {
+      _fail(9);
+      return;
+    }
 
     if (pos == _currPos) {
       _holdPositionStart = _currPos;
@@ -272,7 +283,7 @@ private:
   bool sensorsOk() {
     // Use stored _pos1 value - assume that sensorsOk called only after
     // position()
-    if (abs(_pos1 - (100 - position2())) <= sensorsOkDelta) {
+    if (abs(_pos1 - _pos2) >= sensorsOkDelta) {
       return true;
     }
 
@@ -363,7 +374,16 @@ private:
   }
 
   bool controlHold() {
+    if (_fail) {
+      return false;
+    }
+
     uint8_t pos = position();
+
+    if (!sensorsOk()) {
+      _fail(10);
+      return false;
+    }
 
     if (_holdReached) {
       // TODO Add possible corrections
@@ -439,7 +459,18 @@ private:
   }
 
   bool controlPoweroff() {
-    if (position() < 100) {
+    if (_fail) {
+      return false;
+    }
+
+    uint8_t pos = position();
+
+    if (!sensorsOk()) {
+      _fail(10);
+      return false;
+    }
+
+    if (pos < 100) {
       open(_holdSpeed);
 
       if (timeout(_holdSpeedChanged, 100)) {
@@ -462,13 +493,13 @@ private:
   uint8_t _pos1, _pos2;
 
   // Use delta to guarantee get 100% open and 0% close
-  const uint8_t delta = 2;
+  const uint8_t delta = 5;
 
   // Max voltage as native integer data
-  const uint16_t maxVoltageSens1 = 889; // 894 - 5
-  const uint16_t minVoltageSens1 = 158; // 153 + 5
-  const uint16_t maxVoltageSens2 = 842; // 847 - 5
-  const uint16_t minVoltageSens2 = 122; // 113 + 5
+  uint16_t minVoltageSens1 = 160;
+  uint16_t maxVoltageSens1 = 890;
+  uint16_t minVoltageSens2 = 120;
+  uint16_t maxVoltageSens2 = 840;
 
   const uint8_t sensorsOkDelta = 4;
 
