@@ -1,6 +1,9 @@
 #include <BTS7960.h>
 #include <TimerMs.h>
 
+#define PID_INTEGER
+#include <GyverPID.h>
+
 class Throttle {
 public:
   Throttle(uint8_t position1Pin, uint8_t position2Pin, uint8_t en, uint8_t lPwm,
@@ -54,12 +57,19 @@ public:
   void check() {
     _motor.Enable();
 
+    regulator.setMode(ON_RATE);
+    regulator.input = position();
+
+    regulator.setLimits(0, speedMaxOpen);
+    regulator.setDirection(NORMAL);
+    regulator.setpoint = 100;
+    regulator.output = 0;
+
     unsigned long start = millis();
 
-    open(speedLowCheck);
-
     while (position() < 100) {
-      delay(1);
+      int val = regulator.getResultTimer();
+      open(val);
 
       if (!sensorsOk()) {
         _fail(1);
@@ -75,12 +85,16 @@ public:
     _motor.Stop();
     delay(1000);
 
+    regulator.setLimits(0, speedMaxClose);
+    regulator.setDirection(REVERSE);
+    regulator.setpoint = 70;
+    regulator.output = 0;
+
     start = millis();
 
-    close(speedLowCheck);
-
-    while (position() > 70) {
-      delay(1);
+    while (position() >= 70) {
+      int val = regulator.getResultTimer();
+      close(val);
 
       if (!sensorsOk()) {
         _fail(3);
@@ -96,12 +110,16 @@ public:
     _motor.Stop();
     delay(1000);
 
+    regulator.setLimits(0, speedMaxOpen);
+    regulator.setDirection(NORMAL);
+    regulator.setpoint = 100;
+    regulator.output = 0;
+
     start = millis();
 
-    open(speedLowCheck);
-
     while (position() < 100) {
-      delay(1);
+      int val = regulator.getResultTimer();
+      open(val);
 
       if (!sensorsOk()) {
         _fail(5);
@@ -284,10 +302,10 @@ private:
     // Use stored _pos1 value - assume that sensorsOk called only after
     // position()
     if (abs(_pos1 - _pos2) >= sensorsOkDelta) {
-      return true;
+      return false;
     }
 
-    return false;
+    return true;
   }
 
   void _fail(uint8_t code) {
@@ -313,10 +331,14 @@ private:
   void syncOpen() {
     unsigned long start = millis();
 
-    open(speedLowStart);
+    regulator.setLimits(0, speedMaxOpen);
+    regulator.setDirection(NORMAL);
+    regulator.setpoint = 100;
+    regulator.output = 0;
 
     while (position() < 100 && !timeout(start, _operationLimit)) {
-      delay(1);
+      int val = regulator.getResultTimer();
+      open(val);
     }
   }
 
@@ -333,8 +355,6 @@ private:
     _status = IN_CLOSE;
     _currentSpeed = speed;
 
-    _motor.TurnRight(speedLowStart);
-    delay(2);
     _motor.TurnRight(speed);
   }
 
@@ -351,8 +371,6 @@ private:
     _status = IN_OPEN;
     _currentSpeed = speed;
 
-    _motor.TurnLeft(speedLowStart);
-    delay(2);
     _motor.TurnLeft(speed);
   }
 
@@ -374,7 +392,7 @@ private:
   }
 
   bool controlHold() {
-    if (_fail) {
+    if (_failed) {
       return false;
     }
 
@@ -459,14 +477,14 @@ private:
   }
 
   bool controlPoweroff() {
-    if (_fail) {
+    if (_failed) {
       return false;
     }
 
     uint8_t pos = position();
 
     if (!sensorsOk()) {
-      _fail(10);
+      _fail(11);
       return false;
     }
 
@@ -511,9 +529,12 @@ private:
 
   uint8_t _currentSpeed;
 
-  const uint8_t speedLowStart = 20;
-  const uint8_t speedLow = 14;
-  const uint8_t speedLowCheck = 30;
+  const uint8_t speedLow = 20;
+
+  // Open faster, then close
+  // to do blowoff
+  const uint8_t speedMaxOpen = 30;
+  const uint8_t speedMaxClose = 20;
 
   bool _failed = false;
 
@@ -534,4 +555,6 @@ private:
   unsigned long _holdSpeedChanged, _holdStartAt;
 
   TimerMs _openedCheck;
+
+  GyverPID regulator = GyverPID(1, 0.1, 0.1, 10);
 };
