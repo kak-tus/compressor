@@ -25,8 +25,8 @@ const uint8_t THROTTLE_POSITION2_PIN = A2;
 const bool LOG_TEMPERATURE = false;
 const bool LOG_SENSOR = false;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = true;
-const bool LOG_THROTTLE_RAW = true;
+const bool LOG_THROTTLE = false;
+const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
@@ -234,26 +234,14 @@ void log() {
     Serial.print(">throttle hold status:");
     Serial.println(thr.holdStatus());
 
-    Serial.print(">throttle hold speed:");
-    Serial.println(thr.holdSpeed());
-
-    Serial.print(">throttle hold position start:");
-    Serial.println(thr.holdPositionStart());
-
-    Serial.print(">throttle hold position want:");
-    Serial.println(thr.holdPositionWant());
-
-    Serial.print(">throttle hold position final:");
-    Serial.println(thr.holdPositionFinal());
+    Serial.print(">throttle hold position:");
+    Serial.println(thr.holdPosition());
 
     Serial.print(">throttle hold reached:");
     Serial.println(thr.holdReached());
 
     Serial.print(">throttle hold direction:");
     Serial.println(thr.holdDirection());
-
-    Serial.print(">throttle hold start at:");
-    Serial.println(thr.holdStartAt());
   }
 
   if (USE_EMULATOR && LOG_EMULATOR) {

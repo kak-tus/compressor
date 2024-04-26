@@ -1,5 +1,4 @@
 #include <BTS7960.h>
-#include <TimerMs.h>
 
 #define PID_INTEGER
 #include <GyverPID.h>
@@ -8,10 +7,11 @@ class Throttle {
 public:
   Throttle(uint8_t position1Pin, uint8_t position2Pin, uint8_t en, uint8_t lPwm,
            uint8_t rPwm)
-      : _pos1Pin(position1Pin), _pos2Pin(position2Pin), _motor(en, lPwm, rPwm),
-        _openedCheck(1000, true, false) {
+      : _pos1Pin(position1Pin), _pos2Pin(position2Pin), _motor(en, lPwm, rPwm) {
     pinMode(_pos1Pin, INPUT);
     pinMode(_pos2Pin, INPUT);
+
+    regulator.setMode(ON_ERROR);
   }
 
   uint8_t position() {
@@ -46,24 +46,17 @@ public:
   uint8_t status() { return uint8_t(_status); }
   uint8_t speed() { return _currentSpeed; }
   uint8_t holdStatus() { return uint8_t(_holdStatus); }
-  uint8_t holdPositionWant() { return _holdPositionWant; }
-  uint8_t holdPositionFinal() { return _holdPositionFinal; }
-  uint8_t holdPositionStart() { return _holdPositionStart; }
-  uint8_t holdSpeed() { return _holdSpeed; }
+  uint8_t holdPosition() { return regulator.setpoint; }
   bool holdReached() { return _holdReached; }
   uint8_t holdDirection() { return uint8_t(_holdDirection); }
-  unsigned long holdStartAt() { return _holdStartAt; }
 
   void check() {
     _motor.Enable();
 
-    regulator.setMode(ON_RATE);
     regulator.input = position();
 
-    regulator.setLimits(0, speedMaxOpen);
-    regulator.setDirection(NORMAL);
-    regulator.setpoint = 100;
-    regulator.output = 0;
+    setRegulator(100, OPEN);
+    regulator.setDt(controlTimeout);
 
     unsigned long start = millis();
 
@@ -85,10 +78,8 @@ public:
     _motor.Stop();
     delay(1000);
 
-    regulator.setLimits(0, speedMaxClose);
-    regulator.setDirection(REVERSE);
-    regulator.setpoint = 70;
-    regulator.output = 0;
+    setRegulator(70, CLOSE);
+    regulator.setDt(controlTimeout);
 
     start = millis();
 
@@ -110,10 +101,8 @@ public:
     _motor.Stop();
     delay(1000);
 
-    regulator.setLimits(0, speedMaxOpen);
-    regulator.setDirection(NORMAL);
-    regulator.setpoint = 100;
-    regulator.output = 0;
+    setRegulator(100, OPEN);
+    regulator.setDt(controlTimeout);
 
     start = millis();
 
@@ -140,14 +129,22 @@ public:
       return false;
     }
 
+    if (!timeout(_controlTime, controlTimeout)) {
+      return true;
+    }
+
+    _controlTime = millis();
+
     switch (_holdStatus) {
     case IN_HOLD:
       return controlHold();
     case IN_POWEROFF:
       return controlPoweroff();
     default:
-      if (_openedCheck.tick()) {
+      if (timeout(_openedChecked, openedCheckedTimeout)) {
         // Periodically check that throttle wasn't uncontrolled open
+        _openedChecked = millis();
+
         uint8_t _currPos = position();
 
         if (!sensorsOk()) {
@@ -182,21 +179,14 @@ public:
         return;
       }
 
-      _holdPositionWant = _currPos;
-      _holdPositionStart = _currPos;
-      _holdPositionFinal = pos;
-      _holdStartAt = millis();
-
       if (_currPos < pos) {
         _holdDirection = OPEN;
         _holdReached = false;
-        _holdSpeed = speedLow;
-        _holdSpeedChanged = millis();
+        setRegulator(pos, OPEN);
       } else if (_currPos > pos) {
         _holdDirection = CLOSE;
         _holdReached = false;
-        _holdSpeed = speedLow;
-        _holdSpeedChanged = millis();
+        setRegulator(pos, CLOSE);
       } else {
         _holdReached = true;
         stop();
@@ -205,7 +195,7 @@ public:
       return;
     }
 
-    if (pos == _holdPositionFinal) {
+    if (pos == regulator.setpoint) {
       return;
     }
 
@@ -217,60 +207,47 @@ public:
     }
 
     if (pos == _currPos) {
-      _holdPositionStart = _currPos;
-      _holdPositionFinal = pos;
-      _holdStartAt = millis();
       _holdReached = true;
       stop();
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
+      regulator.setpoint = pos;
       return;
     }
 
     if (_holdReached) {
-      _holdPositionStart = _currPos;
-      _holdPositionFinal = pos;
-      _holdStartAt = millis();
       _holdReached = false;
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
 
       if (_currPos < pos) {
         _holdDirection = OPEN;
+        setRegulator(pos, OPEN);
       } else {
         _holdDirection = CLOSE;
+        setRegulator(pos, CLOSE);
       }
-    } else {
-      if (_holdDirection == OPEN) {
-        if (_currPos < pos) {
-          // Continue open
-          _holdPositionFinal = pos;
-          _holdReached = false;
-        } else {
-          // Direction changed
-          _holdPositionStart = _currPos;
-          _holdPositionFinal = pos;
-          _holdStartAt = millis();
-          _holdDirection = CLOSE;
-          _holdReached = false;
-          _holdSpeed = speedLow;
-          _holdSpeedChanged = millis();
-        }
-      } else if (_holdDirection == CLOSE) {
-        if (_currPos > pos) {
-          // Continue close
-          _holdPositionFinal = pos;
-          _holdReached = false;
-        } else {
-          // Direction changed
-          _holdPositionStart = _currPos;
-          _holdPositionFinal = pos;
-          _holdStartAt = millis();
-          _holdDirection = OPEN;
-          _holdReached = false;
-          _holdSpeed = speedLow;
-          _holdSpeedChanged = millis();
-        }
+
+      return;
+    }
+
+    if (_holdDirection == OPEN) {
+      if (_currPos < pos) {
+        // Continue open
+        _holdReached = false;
+        regulator.setpoint = pos;
+      } else {
+        // Direction changed
+        _holdDirection = CLOSE;
+        _holdReached = false;
+        setRegulator(pos, CLOSE);
+      }
+    } else if (_holdDirection == CLOSE) {
+      if (_currPos > pos) {
+        // Continue close
+        _holdReached = false;
+        regulator.setpoint = pos;
+      } else {
+        // Direction changed
+        _holdDirection = OPEN;
+        _holdReached = false;
+        setRegulator(pos, OPEN);
       }
     }
   }
@@ -286,20 +263,13 @@ public:
 
     _holdStatus = IN_POWEROFF;
     _motor.Enable();
-    _holdSpeed = speedLow;
-    _holdSpeedChanged = millis();
-
-    // Not using in poweroff operation processing, only for logging purposes
-    _holdPositionFinal = 100;
-    _holdPositionStart = position();
-    _holdDirection = OPEN;
-    _holdStartAt = millis();
+    setRegulator(100, OPEN);
   }
 
 private:
   // Call sensorsOk only after position() call
   bool sensorsOk() {
-    // Use stored _pos1 value - assume that sensorsOk called only after
+    // Use stored _pos values - assume that sensorsOk called only after
     // position()
     if (abs(_pos1 - _pos2) >= sensorsOkDelta) {
       return false;
@@ -331,10 +301,8 @@ private:
   void syncOpen() {
     unsigned long start = millis();
 
-    regulator.setLimits(0, speedMaxOpen);
-    regulator.setDirection(NORMAL);
-    regulator.setpoint = 100;
-    regulator.output = 0;
+    setRegulator(100, OPEN);
+    regulator.setDt(controlTimeout);
 
     while (position() < 100 && !timeout(start, _operationLimit)) {
       int val = regulator.getResultTimer();
@@ -407,70 +375,22 @@ private:
       // TODO Add possible corrections
     } else {
       if (_holdDirection == OPEN) {
-        if (pos < _holdPositionWant) {
-          open(_holdSpeed);
-
-          // TODO control speed
-          //   // Open faster, then close
-          //   // to do blowoff
-          //   if (timeout(_holdSpeedChanged, 10)) {
-          //     _holdSpeed += 1;
-          //     _holdSpeedChanged = millis();
-          //   }
+        if (pos < regulator.setpoint) {
+          int val = regulator.getResultNow();
+          open(val);
         } else {
-          _holdSpeed = speedLow;
-          _holdSpeedChanged = millis();
           _holdReached = true;
           stop();
         }
       } else if (_holdDirection == CLOSE) {
-        if (pos > _holdPositionWant) {
-          close(_holdSpeed);
-
-          //   // Close slower, then open
-          //   // to do smooth boost
-          //   if (timeout(_holdSpeedChanged, 100)) {
-          //     _holdSpeed += 1;
-          //     _holdSpeedChanged = millis();
-          //   }
+        if (pos > regulator.setpoint) {
+          int val = regulator.getResultNow();
+          close(val);
         } else {
-          _holdSpeed = speedLow;
-          _holdSpeedChanged = millis();
           _holdReached = true;
           stop();
         }
       }
-    }
-
-    // Open faster, then close
-    // to do blowoff
-    // Close slower, then open
-    // to do smooth boost
-    if (_holdPositionWant < _holdPositionFinal) {
-      unsigned long _newWant =
-          (unsigned long)_holdPositionStart + (millis() - _holdStartAt) / 10;
-
-      if (_newWant > _holdPositionFinal) {
-        _holdPositionWant = _holdPositionFinal;
-      } else {
-        _holdPositionWant = _newWant;
-      }
-
-      _holdReached = false;
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
-    } else if (_holdPositionWant > _holdPositionFinal) {
-      unsigned long _newWant = (millis() - _holdStartAt) / 100;
-
-      if (_newWant > _holdPositionStart) {
-        _holdPositionWant = _holdPositionFinal;
-      } else {
-        _holdPositionWant = _holdPositionStart - _newWant;
-      }
-
-      _holdReached = false;
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
     }
 
     return true;
@@ -489,15 +409,9 @@ private:
     }
 
     if (pos < 100) {
-      open(_holdSpeed);
-
-      if (timeout(_holdSpeedChanged, 100)) {
-        _holdSpeed += 1;
-        _holdSpeedChanged = millis();
-      }
+      int val = regulator.getResultNow();
+      open(val);
     } else {
-      _holdSpeed = speedLow;
-      _holdSpeedChanged = millis();
       _motor.Disable();
       _holdStatus = holdStatusType(0);
       _holdReached = true;
@@ -507,6 +421,7 @@ private:
   }
 
   const uint8_t _pos1Pin, _pos2Pin;
+
   uint16_t _voltagePos1, _voltagePos2;
   uint8_t _pos1, _pos2;
 
@@ -524,16 +439,15 @@ private:
   BTS7960 _motor;
 
   enum statusType { IN_OPEN = 1, IN_CLOSE, IN_STOP };
-
   statusType _status;
 
   uint8_t _currentSpeed;
 
-  const uint8_t speedLow = 20;
-
   // Open faster, then close
   // to do blowoff
+  const uint8_t speedMinOpen = 16;
   const uint8_t speedMaxOpen = 30;
+  const uint8_t speedMinClose = 10;
   const uint8_t speedMaxClose = 20;
 
   bool _failed = false;
@@ -543,18 +457,32 @@ private:
   uint8_t _failStateCode = 0;
 
   enum holdStatusType { IN_HOLD = 1, IN_POWEROFF };
-
   holdStatusType _holdStatus;
-  uint8_t _holdPositionWant, _holdPositionFinal, _holdPositionStart;
-  uint8_t _holdSpeed;
+
   bool _holdReached;
 
   enum holdDirectionType { OPEN, CLOSE };
   holdDirectionType _holdDirection;
 
-  unsigned long _holdSpeedChanged, _holdStartAt;
+  unsigned long _openedChecked;
+  const uint16_t openedCheckedTimeout = 5000;
 
-  TimerMs _openedCheck;
+  unsigned long _controlTime;
+  const uint16_t controlTimeout = 10;
 
-  GyverPID regulator = GyverPID(1, 0.1, 0.1, 10);
+  GyverPID regulator = GyverPID(1, 0.1, 0.1, controlTimeout);
+
+  void setRegulator(uint8_t pos, holdDirectionType direction) {
+    regulator.setpoint = pos;
+    regulator.output = 0;
+    regulator.getResultNow();
+
+    if (direction == OPEN) {
+      regulator.setLimits(speedMinOpen, speedMaxOpen);
+      regulator.setDirection(NORMAL);
+    } else {
+      regulator.setLimits(speedMinClose, speedMaxClose);
+      regulator.setDirection(REVERSE);
+    }
+  }
 };
