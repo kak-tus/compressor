@@ -5,6 +5,7 @@
 #include "controller.h"
 #include "emulator.h"
 #include "errors.h"
+#include "multiplexor.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
 #include "sensor.h"
@@ -31,9 +32,10 @@ const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER = false;
+const bool LOG_MUX = true;
 
 const uint8_t PUMP_PIN = 7;
-const uint8_t COOLER_PIN = 8;
+const uint8_t COOLER_PIN = 9;
 
 const uint8_t PUMP_ON_TEMPERATURE = 20;
 const uint8_t PUMP_OFF_TEMPERATURE = 19;
@@ -66,10 +68,10 @@ Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
 const bool USE_EMULATOR = true;
 
-const uint8_t EMULATOR_PIN = A5;
+const uint8_t EMULATOR_VIRTUAL_PIN = 3;
 
-Emulator emul1(EMULATOR_PIN, Emulator::BEFORE_THROTTLE);
-Emulator emul2(EMULATOR_PIN, Emulator::AFTER_THROTTLE);
+Emulator emul1(EMULATOR_VIRTUAL_PIN, Emulator::BEFORE_THROTTLE, &muxRead);
+Emulator emul2(EMULATOR_VIRTUAL_PIN, Emulator::AFTER_THROTTLE, &muxRead);
 
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
@@ -82,7 +84,7 @@ TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
 Errors err(BEEP_PIN);
 
 bool failed = false;
-bool poweredoff = false;
+bool poweredoff = true;
 
 Controller cntrl;
 
@@ -92,6 +94,14 @@ Switch compressor(COMPRESSOR_PIN);
 
 const bool USE_CALIBRATE = false;
 Calibrate clbr;
+
+const uint8_t MUX_Z_PIN = A5;
+const uint8_t MUX_E_PIN = 11;
+const uint8_t MUX_S0_PIN = 12;
+const uint8_t MUX_S1_PIN = 13;
+const uint8_t MUX_GND_VIRTUAL_PIN = 0;
+
+Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN, MUX_GND_VIRTUAL_PIN);
 
 void setup() {
   Serial.begin(115200);
@@ -144,9 +154,7 @@ void loop() {
       poweredoff = true;
 
       powerOffNotify.poweroff();
-
       compressor.poweroff();
-
       thr.poweroff();
 
       tControlPump.poweroff();
@@ -155,6 +163,7 @@ void loop() {
       poweredoff = false;
 
       powerOffNotify.poweron();
+      compressor.poweron();
     }
   }
 
@@ -294,4 +303,13 @@ void log() {
       Serial.println(cntrl.isPressure2Down(pressure2));
     }
   }
+
+  if (LOG_MUX) {
+    Serial.print(">mux emulator:");
+    Serial.println(muxRead(EMULATOR_VIRTUAL_PIN));
+  }
+}
+
+uint16_t muxRead(uint8_t pin) {
+  return mux.read(pin);
 }

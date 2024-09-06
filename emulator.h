@@ -4,9 +4,9 @@ class Emulator {
 public:
   enum EmulatorType { BEFORE_THROTTLE = 1, AFTER_THROTTLE };
 
-  Emulator(uint8_t emulatorPin, EmulatorType type)
-      : _emulatorPin(emulatorPin), _rpmChange(100, true, false), _type(type) {
-    pinMode(_emulatorPin, INPUT);
+  Emulator(uint8_t emulatorPin, EmulatorType type, uint16_t (*mux)(uint8_t))
+      : _emulatorPin(emulatorPin), _rpmChange(100, true, false), _type(type),
+        _mux(mux) {
     _rpm = minRPM;
     _rpmChangedAt = millis();
   }
@@ -14,7 +14,7 @@ public:
   uint32_t pressure() {
     uint8_t _prevVoltage = _voltage;
 
-    _voltage = analogRead(_emulatorPin);
+    _voltage = _mux(_emulatorPin);
 
     if (_voltage < minVoltage + delta) {
       _throttlePos = 0;
@@ -130,4 +130,6 @@ private:
   // Max voltage as native integer data
   const uint16_t maxVoltage = 990;
   const uint16_t minVoltage = 8;
+
+  uint16_t (*_mux)(uint8_t);
 };
