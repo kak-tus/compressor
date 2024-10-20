@@ -101,9 +101,24 @@ const uint8_t MUX_S0_PIN = 12;
 const uint8_t MUX_S1_PIN = 13;
 const uint8_t MUX_GND_VIRTUAL_PIN = 0;
 
-Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN, MUX_GND_VIRTUAL_PIN);
+Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN,
+                MUX_GND_VIRTUAL_PIN);
 
 void setup() {
+  pinMode(9, OUTPUT);
+
+  for (;;) {
+    // for (int i = 40; i <= 150; i++) {
+      analogWrite(9, 150);
+      delay(3000);
+    // }
+
+    // for (int i = 150; i > 40; i--) {
+      analogWrite(9, 40);
+      delay(3000);
+    // }
+  }
+
   Serial.begin(115200);
 
   if (!USE_EMULATOR) {
@@ -310,6 +325,4 @@ void log() {
   }
 }
 
-uint16_t muxRead(uint8_t pin) {
-  return mux.read(pin);
-}
+uint16_t muxRead(uint8_t pin) { return mux.read(pin); }
