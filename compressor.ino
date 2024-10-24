@@ -2,6 +2,7 @@
 #include <TimerMs.h>
 
 #include "calibrate.h"
+#include "consumptionControl.h"
 #include "controller.h"
 #include "emulator.h"
 #include "errors.h"
@@ -32,7 +33,7 @@ const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER = false;
-const bool LOG_MUX = true;
+const bool LOG_CONSUMPTION = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
@@ -52,6 +53,7 @@ const uint8_t BEEP_PIN = 10;
 TimerMs poweroffCheck(100, true, false);
 TimerMs logCheck(1000, true, false);
 TimerMs heatCheck(1000, true, false);
+TimerMs consumptionCheck(500, true, false);
 
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
@@ -104,19 +106,45 @@ const uint8_t MUX_GND_VIRTUAL_PIN = 0;
 Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN,
                 MUX_GND_VIRTUAL_PIN);
 
+const uint8_t R_IS_L_IS_VIRTUAL_PIN = 1;
+const uint8_t ACS_VIRTUAL_PIN = 2;
+
+ConsumptionControl consumption(ACS_VIRTUAL_PIN, R_IS_L_IS_VIRTUAL_PIN,
+                               &muxRead);
+
 void setup() {
-  pinMode(9, OUTPUT);
+  pinMode(COOLER_PIN, OUTPUT);
 
   for (;;) {
-    // for (int i = 40; i <= 150; i++) {
-      analogWrite(9, 150);
-      delay(3000);
-    // }
+    for (int i = 40; i <= 255; i++) {
+      analogWrite(COOLER_PIN, i);
+      delay(500);
+    }
 
-    // for (int i = 150; i > 40; i--) {
-      analogWrite(9, 40);
-      delay(3000);
-    // }
+    for (int i = 255; i > 40; i--) {
+      analogWrite(COOLER_PIN, i);
+      delay(500);
+    }
+  }
+
+  pinMode(PUMP_PIN, OUTPUT);
+
+  for (;;) {
+    digitalWrite(PUMP_PIN, LOW);
+    delay(3000);
+
+    digitalWrite(PUMP_PIN, HIGH);
+    delay(3000);
+  }
+
+  pinMode(COMPRESSOR_PIN, OUTPUT);
+
+  for (;;) {
+    digitalWrite(COMPRESSOR_PIN, LOW);
+    delay(3000);
+
+    digitalWrite(COMPRESSOR_PIN, HIGH);
+    delay(3000);
   }
 
   Serial.begin(115200);
@@ -190,9 +218,25 @@ void loop() {
     int16_t temp = sens1.temperature();
 
     tControlPump.control(temp);
-    tControlCooler.control(temp);
+    tControlCooler.controlPWM(temp);
 
     cntrl.setTemperature(temp);
+  }
+
+  if (consumptionCheck.tick() && !failed && !poweredoff) {
+    if (consumption.failed()) {
+      failed = true;
+
+      tControlPump.poweroff();
+      tControlCooler.poweroff();
+
+      compressor.poweroff();
+
+      // TODO FIX code
+      Serial.println("Fail state: 12");
+
+      err.error(12);
+    }
   }
 }
 
@@ -319,9 +363,12 @@ void log() {
     }
   }
 
-  if (LOG_MUX) {
-    Serial.print(">mux emulator:");
-    Serial.println(muxRead(EMULATOR_VIRTUAL_PIN));
+  if (LOG_CONSUMPTION) {
+    Serial.print(">consumption ACS:");
+    Serial.println(consumption.consumptionACS());
+
+    Serial.print(">consumption IS:");
+    Serial.println(consumption.consumptionIS());
   }
 }
 
