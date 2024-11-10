@@ -3,10 +3,16 @@
 
 class TemperatureControl {
 public:
-  TemperatureControl(uint8_t controlPin, int8_t onTemp, int8_t offTemp)
-      : _pin(controlPin), _onTemp(onTemp), _offTemp(offTemp) {
+  TemperatureControl(uint8_t controlPin, int8_t onTemp, int8_t offTemp,
+                     bool isPWM)
+      : _pin(controlPin), _onTemp(onTemp), _offTemp(offTemp), _isPWM(isPWM) {
     pinMode(_pin, OUTPUT);
-    digitalWrite(_pin, OFF);
+
+    if (isPWM) {
+      analogWrite(_pin, 0);
+    } else {
+      digitalWrite(_pin, OFF);
+    }
 
     regulator.setpoint = onTemp;
     regulator.setDirection(REVERSE);
@@ -14,21 +20,28 @@ public:
   }
 
   void control(int16_t temp) {
-    if (temp > _onTemp) {
-      if (_on) {
-        return;
-      }
-
-      digitalWrite(_pin, ON);
+    if (temp >= _onTemp) {
       _on = true;
+
+      if (_isPWM) {
+        regulator.input = temp;
+        analogWrite(_pin, regulator.getResult());
+      } else {
+        digitalWrite(_pin, ON);
+      }
     }
 
-    if (temp < _offTemp) {
+    if (temp <= _offTemp) {
       if (!_on) {
         return;
       }
 
-      digitalWrite(_pin, OFF);
+      if (_isPWM) {
+        analogWrite(_pin, 0);
+      } else {
+        digitalWrite(_pin, OFF);
+      }
+
       _on = false;
     }
   }
@@ -38,30 +51,19 @@ public:
       return;
     }
 
-    digitalWrite(_pin, OFF);
-    _on = false;
-  }
-
-  void controlPWM(int16_t temp) {
-    if (temp > _onTemp) {
-      _on = true;
-      regulator.input = temp;
-      analogWrite(_pin, regulator.getResult());
-    }
-
-    if (temp < _offTemp) {
-      if (!_on) {
-        return;
-      }
-
+    if (_isPWM) {
+      analogWrite(_pin, 0);
+    } else {
       digitalWrite(_pin, OFF);
-      _on = false;
     }
+
+    _on = false;
   }
 
 private:
   const uint8_t _pin;
   const int8_t _onTemp, _offTemp;
+  const bool _isPWM;
 
   const uint8_t ON = LOW;
   const uint8_t OFF = HIGH;

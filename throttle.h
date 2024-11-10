@@ -314,7 +314,7 @@ private:
     if (_status == IN_CLOSE) {
       if (_currentSpeed != speed) {
         _currentSpeed = speed;
-        _motor.TurnRight(speed);
+        _motor.TurnLeft(speed);
       }
 
       return;
@@ -323,14 +323,14 @@ private:
     _status = IN_CLOSE;
     _currentSpeed = speed;
 
-    _motor.TurnRight(speed);
+    _motor.TurnLeft(speed);
   }
 
   void open(uint8_t speed) {
     if (_status == IN_OPEN) {
       if (_currentSpeed != speed) {
         _currentSpeed = speed;
-        _motor.TurnLeft(speed);
+        _motor.TurnRight(speed);
       }
 
       return;
@@ -339,7 +339,7 @@ private:
     _status = IN_OPEN;
     _currentSpeed = speed;
 
-    _motor.TurnLeft(speed);
+    _motor.TurnRight(speed);
   }
 
   void stop() {
@@ -445,10 +445,10 @@ private:
 
   // Open faster, then close
   // to do blowoff
-  const uint8_t speedMinOpen = 16;
-  const uint8_t speedMaxOpen = 30;
-  const uint8_t speedMinClose = 10;
-  const uint8_t speedMaxClose = 20;
+  const uint8_t speedMinOpen = 20;
+  const uint8_t speedMaxOpen = 35;
+  const uint8_t speedMinClose = 20;
+  const uint8_t speedMaxClose = 35;
 
   bool _failed = false;
 

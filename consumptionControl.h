@@ -26,9 +26,9 @@ private:
   const uint8_t _acsPin, _isPin;
   uint16_t (*_mux)(uint8_t);
 
-  const uint16_t maxACSConsumption = 100;
+  const uint16_t maxACSConsumption = 1000;
   // From BTS 7960 docs
   // a resistor value of RIS = 1kΩ leads
   // to VIS = (IL / 8.5 A)V
-  const uint16_t maxISConsumption = 100;
+  const uint16_t maxISConsumption = 1000;
 };

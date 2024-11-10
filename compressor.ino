@@ -24,25 +24,26 @@ const uint8_t MAP2_PIN = A3;
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_TEMPERATURE = false;
-const bool LOG_SENSOR = false;
+const bool LOG_TEMPERATURE = true;
+const bool LOG_SENSOR = true;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = false;
+const bool LOG_THROTTLE = true;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
-const bool LOG_CONTROLLER = false;
-const bool LOG_CONSUMPTION = true;
+const bool LOG_CONTROLLER = true;
+const bool LOG_CONTROLLER_INTERNAL = false;
+const bool LOG_CONSUMPTION = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
 
-const uint8_t PUMP_ON_TEMPERATURE = 20;
-const uint8_t PUMP_OFF_TEMPERATURE = 19;
+const uint8_t PUMP_ON_TEMPERATURE = 45;
+const uint8_t PUMP_OFF_TEMPERATURE = 23;
 
-const uint8_t COOLER_ON_TEMPERATURE = 21;
-const uint8_t COOLER_OFF_TEMPERATURE = 20;
+const uint8_t COOLER_ON_TEMPERATURE = 45;
+const uint8_t COOLER_OFF_TEMPERATURE = 23;
 
 const uint8_t EN_PIN = 3;
 const uint8_t R_PWM_PIN = 6;
@@ -59,7 +60,7 @@ PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
 const int16_t sensor1MapCorrection = 0;
-const int16_t sensor2MapCorrection = 1400;
+const int16_t sensor2MapCorrection = 0;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
@@ -68,7 +69,7 @@ Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
 // Sensor 2 - out sensor, after throttle
 Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
 
-const bool USE_EMULATOR = true;
+const bool USE_EMULATOR = false;
 
 const uint8_t EMULATOR_VIRTUAL_PIN = 3;
 
@@ -79,9 +80,9 @@ Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
 
 TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
-                                PUMP_OFF_TEMPERATURE);
+                                PUMP_OFF_TEMPERATURE, false);
 TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
-                                  COOLER_OFF_TEMPERATURE);
+                                  COOLER_OFF_TEMPERATURE, true);
 
 Errors err(BEEP_PIN);
 
@@ -113,71 +114,153 @@ ConsumptionControl consumption(ACS_VIRTUAL_PIN, R_IS_L_IS_VIRTUAL_PIN,
                                &muxRead);
 
 void setup() {
-  pinMode(COOLER_PIN, OUTPUT);
-
-  for (;;) {
-    for (int i = 40; i <= 255; i++) {
-      analogWrite(COOLER_PIN, i);
-      delay(500);
-    }
-
-    for (int i = 255; i > 40; i--) {
-      analogWrite(COOLER_PIN, i);
-      delay(500);
-    }
-  }
-
-  pinMode(PUMP_PIN, OUTPUT);
-
-  for (;;) {
-    digitalWrite(PUMP_PIN, LOW);
-    delay(3000);
-
-    digitalWrite(PUMP_PIN, HIGH);
-    delay(3000);
-  }
-
-  pinMode(COMPRESSOR_PIN, OUTPUT);
-
-  for (;;) {
-    digitalWrite(COMPRESSOR_PIN, LOW);
-    delay(3000);
-
-    digitalWrite(COMPRESSOR_PIN, HIGH);
-    delay(3000);
-  }
-
   Serial.begin(115200);
 
   if (!USE_EMULATOR) {
     cntrl.setNormalPressure(sens1.pressure());
   }
 
-  thr.check();
+  if (!USE_CALIBRATE) {
+    thr.check();
+  }
 }
 
 void loop() {
+  if (USE_CALIBRATE) {
+    loopCalibrate();
+  } else {
+    loopNormal();
+  }
+}
+
+void loopCalibrate() {
+  tControlPump.control(PUMP_ON_TEMPERATURE);
+  delay(2000);
+
+  tControlPump.poweroff();
+
+  tControlCooler.control(COOLER_ON_TEMPERATURE);
+  delay(1000);
+
+  tControlCooler.control(COOLER_OFF_TEMPERATURE);
+
+  compressor.poweron();
+  delay(1000);
+  compressor.poweroff();
+  delay(1000);
+
+  for (uint8_t i = 0; i < 5; i++) {
+    Serial.print("poweroff need:");
+    Serial.println(powerOff.need());
+    delay(1000);
+  }
+
+  for (uint8_t i = 0; i < 5; i++) {
+    powerOffNotify.poweroff();
+    delay(500);
+    powerOffNotify.poweron();
+    delay(500);
+  }
+
+  Serial.print("sens1 temperature:");
+  Serial.println(sens1.temperature());
+  Serial.print("sens1 voltage temp:");
+  Serial.println(sens1.voltageTemp());
+
+  Serial.print("sens1 pressure (pa):");
+  Serial.println(sens1.pressure());
+  Serial.print("sens1 pressure (mm):");
+  Serial.println(sens1.pressureInMM());
+  Serial.print("sens1 voltage map:");
+  Serial.println(sens1.voltageMap());
+
+  Serial.print("sens2 pressure (pa):");
+  Serial.println(sens2.pressure());
+  Serial.print("sens2 pressure (mm):");
+  Serial.println(sens2.pressureInMM());
+  Serial.print("sens2 voltage map:");
+  Serial.println(sens2.voltageMap());
+
+  Serial.print("throttle position:");
+  Serial.println(thr.position());
+
+  Serial.print("throttle 1 voltage:");
+  Serial.println(thr.voltagePosition1());
+
+  Serial.print("throttle 2 voltage:");
+  Serial.println(thr.voltagePosition2());
+
+  unsigned long _started = millis();
+
+  for (;;) {
+    thr.hold(clbr.position());
+
+    if (!thr.control()) {
+      Serial.print("throttle error:");
+      Serial.println(thr.failStateCode());
+      break;
+    }
+
+    if (logCheck.tick()) {
+      Serial.print("throttle position:");
+      Serial.println(thr.position());
+
+      Serial.print("throttle 1 voltage:");
+      Serial.println(thr.voltagePosition1());
+
+      Serial.print("throttle 2 voltage:");
+      Serial.println(thr.voltagePosition2());
+
+      Serial.print("throttle status:");
+      Serial.println(thr.status());
+
+      Serial.print("throttle speed:");
+      Serial.println(thr.speed());
+
+      Serial.print("throttle hold status:");
+      Serial.println(thr.holdStatus());
+
+      Serial.print("throttle hold position:");
+      Serial.println(thr.holdPosition());
+
+      Serial.print("throttle hold reached:");
+      Serial.println(thr.holdReached());
+
+      Serial.print("throttle hold direction:");
+      Serial.println(thr.holdDirection());
+
+      Serial.print("consumption ACS:");
+      Serial.println(consumption.consumptionACS());
+
+      Serial.print("consumption IS:");
+      Serial.println(consumption.consumptionIS());
+    }
+
+    if (millis() - _started > 30000) {
+      break;
+    }
+  }
+
+  delay(30000);
+}
+
+void loopNormal() {
   if (!failed && !poweredoff) {
     if (USE_EMULATOR) {
       emul1.setRealThrottle(thr.position());
       emul2.setRealThrottle(thr.position());
 
-      if (USE_CALIBRATE) {
-        thr.hold(clbr.position());
-      } else {
-        thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
-      }
+      thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
     } else {
-      if (USE_CALIBRATE) {
-        thr.hold(clbr.position());
-      } else {
-        thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
-      }
+      thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
     }
   }
 
   if (!thr.control()) {
     if (!failed) {
+      Serial.print("Fail state: ");
+      Serial.println(thr.failStateCode());
+
       failed = true;
 
       tControlPump.poweroff();
@@ -185,15 +268,14 @@ void loop() {
 
       compressor.poweroff();
 
-      Serial.print("Fail state: ");
-      Serial.println(thr.failStateCode());
-
       err.error(thr.failStateCode());
     }
   }
 
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {
+      Serial.println("Power off");
+
       poweredoff = true;
 
       powerOffNotify.poweroff();
@@ -202,7 +284,9 @@ void loop() {
 
       tControlPump.poweroff();
       tControlCooler.poweroff();
-    } else if (!powerOff.need() && poweredoff) {
+    } else if (!failed && !powerOff.need() && poweredoff) {
+      Serial.println("Power on");
+
       poweredoff = false;
 
       powerOffNotify.poweron();
@@ -218,22 +302,22 @@ void loop() {
     int16_t temp = sens1.temperature();
 
     tControlPump.control(temp);
-    tControlCooler.controlPWM(temp);
+    tControlCooler.control(temp);
 
     cntrl.setTemperature(temp);
   }
 
   if (consumptionCheck.tick() && !failed && !poweredoff) {
     if (consumption.failed()) {
+      // TODO FIX code
+      Serial.println("Fail state: 12");
+
       failed = true;
 
       tControlPump.poweroff();
       tControlCooler.poweroff();
 
       compressor.poweroff();
-
-      // TODO FIX code
-      Serial.println("Fail state: 12");
 
       err.error(12);
     }
@@ -242,7 +326,7 @@ void loop() {
 
 void log() {
   if (LOG_TEMPERATURE) {
-    Serial.print(">temperature:");
+    Serial.print(">sens1 temperature:");
     Serial.println(sens1.temperature());
   }
 
@@ -269,7 +353,7 @@ void log() {
     Serial.print(">sens2 pressure (mm):");
     Serial.println(sens2.pressureInMM());
 
-    Serial.print(">voltage temp:");
+    Serial.print(">sens1 voltage temp:");
     Serial.println(sens1.voltageTemp());
 
     Serial.print(">sens1 voltage map:");
@@ -335,31 +419,33 @@ void log() {
     Serial.print(">controller pressure 1 want:");
     Serial.println(cntrl.pressure1Want());
 
-    Serial.print(">controller position:");
-    Serial.println(cntrl.positionVal());
+    if (LOG_CONTROLLER_INTERNAL) {
+      Serial.print(">controller position:");
+      Serial.println(cntrl.positionVal());
 
-    Serial.print(">controller direction:");
-    Serial.println(cntrl.direction());
+      Serial.print(">controller direction:");
+      Serial.println(cntrl.direction());
 
-    Serial.print(">controller reached:");
-    Serial.println(cntrl.reached());
+      Serial.print(">controller reached:");
+      Serial.println(cntrl.reached());
 
-    if (USE_EMULATOR) {
-      uint32_t pressure2 = emul2.pressure();
+      if (USE_EMULATOR) {
+        uint32_t pressure2 = emul2.pressure();
 
-      Serial.print(">controller is pressure2 up:");
-      Serial.println(cntrl.isPressure2Up(pressure2));
+        Serial.print(">controller is pressure2 up:");
+        Serial.println(cntrl.isPressure2Up(pressure2));
 
-      Serial.print(">controller is pressure2 down:");
-      Serial.println(cntrl.isPressure2Down(pressure2));
-    } else {
-      uint32_t pressure2 = sens2.pressure();
+        Serial.print(">controller is pressure2 down:");
+        Serial.println(cntrl.isPressure2Down(pressure2));
+      } else {
+        uint32_t pressure2 = sens2.pressure();
 
-      Serial.print(">controller is pressure2 up:");
-      Serial.println(cntrl.isPressure2Up(pressure2));
+        Serial.print(">controller is pressure2 up:");
+        Serial.println(cntrl.isPressure2Up(pressure2));
 
-      Serial.print(">controller is pressure2 down:");
-      Serial.println(cntrl.isPressure2Down(pressure2));
+        Serial.print(">controller is pressure2 down:");
+        Serial.println(cntrl.isPressure2Down(pressure2));
+      }
     }
   }
 

@@ -161,7 +161,7 @@ private:
     _previousPressure2_2Changed = millis();
   }
 
-  const uint32_t closedPressure = 62000;
+  const uint32_t closedPressure = 42000;
   const uint32_t limitPressure = 115000;
   const uint32_t pressureDelta = 1000;
   const uint32_t pressureUpDownDelta = 6000;
