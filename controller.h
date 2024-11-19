@@ -6,55 +6,35 @@ public:
     // Don't use real initial percent
     // this controller control how MUST be percent set, but not real percent
     // Real and wanted percents controlled by throttle
-    _percent = 100;
+    _position = 100;
   }
 
   uint8_t position(uint32_t pressure1, uint32_t pressure2) {
-    setPreviousPressure2(pressure2);
+    setPreviousPressure1(pressure1);
 
-    if (timeout(_pressure1WantChanged, 100)) {
-      if (isPressure2Up(pressure2)) {
-        _pressure1Want = maxPressure;
-        _pressure1WantChanged = millis();
-      } else if (isPressure2Down(pressure2)) {
-        _pressure1Want = pressure2 + pressureOver;
-        _pressure1WantChanged = millis();
+    if (pressure2 > limitPressure2 + pressureDelta) {
+      if (timeout(_logLimit, 1000)) {
+        Serial.print("Pressure limit: ");
+        Serial.println(pressure2);
       }
 
-      // With closed throttle
-      // No need in high boost
-      // Hold little overboost on normal pressure
-      if (pressure2 <= closedPressure) {
-        _pressure1Want = _normalPressure + pressureOver;
-        _pressure1WantChanged = millis();
+      incPosition();
+    } else if (isBlowoff(pressure1)) {
+      if (timeout(_logBlowoff, 1000)) {
+        Serial.print("Blowoff: from ");
+        Serial.print(_previousPressure1);
+        Serial.print(" to ");
+        Serial.println(pressure1);
       }
 
-      // Limit, need lower boost
-      if (pressure2 >= limitPressure + pressureOver) {
-        _pressure1Want = limitPressure + pressureOver;
-        _pressure1WantChanged = millis();
-      }
-    }
-
-    if (pressure1 < _pressure1Want - pressureDelta) {
-      _direction = CLOSE;
-      _reached = false;
-    } else if (pressure1 > _pressure1Want + pressureDelta) {
-      _direction = OPEN;
-      _reached = false;
+      setPosition(100);
+    } else if (isEngineIdle(pressure2)) {
+      setPosition(100);
     } else {
-      _reached = true;
+      decPosition();
     }
 
-    if (!_reached) {
-      if (_direction == OPEN) {
-        incPercent();
-      } else if (_direction == CLOSE) {
-        decPercent();
-      }
-    }
-
-    return _percent;
+    return _position;
   }
 
   void setTemperature(uint16_t temperature) {
@@ -75,39 +55,24 @@ public:
     }
   }
 
-  void setNormalPressure(uint32_t pressure) { _normalPressure = pressure; }
+  uint8_t positionVal() { return _position; }
 
-  uint32_t pressure1Want() { return _pressure1Want; }
-  uint8_t positionVal() { return _percent; }
-  directionType direction() { return _direction; }
-  bool reached() { return _reached; }
-
-  bool isPressure2Up(uint32_t pressure2) {
-    if (_previousPressure2_1 == 0) {
+  bool isEngineIdle(uint32_t pressure2) {
+    if (pressure2 < closedPressure2 - pressureIdleDelta) {
       return false;
-    }
-
-    if (_previousPressure2_1 < _previousPressure2_2 &&
-        _previousPressure2_2 < pressure2 &&
-        pressure2 - _previousPressure2_1 > pressureUpDownDelta) {
+    } else if (pressure2 > closedPressure2 + pressureIdleDelta) {
+      return false;
+    } else {
       return true;
     }
-
-    return false;
   }
 
-  bool isPressure2Down(uint32_t pressure2) {
-    if (_previousPressure2_1 == 0) {
+  bool isBlowoff(uint32_t pressure1) {
+    if (pressure1 > _previousPressure1 + blowoffDelta) {
+      return true;
+    } else {
       return false;
     }
-
-    if (_previousPressure2_1 > _previousPressure2_2 &&
-        _previousPressure2_2 > pressure2 &&
-        _previousPressure2_1 - pressure2 > pressureUpDownDelta) {
-      return true;
-    }
-
-    return false;
   }
 
 private:
@@ -119,71 +84,65 @@ private:
     return true;
   }
 
-  void incPercent() {
-    if (!timeout(_percentChanged, 50)) {
+  void incPosition() {
+    if (!timeout(_positionChanged, openDelay)) {
       return;
     }
 
-    _percentChanged = millis();
+    _positionChanged = millis();
 
-    if (_percent >= 100) {
+    if (_position >= 100) {
       return;
     }
 
-    _percent++;
+    _position++;
   }
 
-  void decPercent() {
-    if (!timeout(_percentChanged, 100)) {
+  void decPosition() {
+    if (!timeout(_positionChanged, closeDelay)) {
       return;
     }
 
-    _percentChanged = millis();
+    _positionChanged = millis();
 
-    if (_percent == 0) {
+    if (_position == 0) {
       return;
     }
 
-    _percent--;
+    _position--;
   }
 
-  void setPreviousPressure2(uint32_t pressure2) {
-    if (!timeout(_previousPressure2Changed, 100)) {
+  void setPosition(uint8_t position) {
+    _positionChanged = millis();
+    _position = 100;
+  }
+
+  void setPreviousPressure1(uint32_t pressure1) {
+    if (!timeout(_previousPressure1Changed, 100)) {
       return;
     }
 
-    _previousPressure2Changed = millis();
+    _previousPressure1Changed = millis();
 
-    _previousPressure2_1 = _previousPressure2_2;
-    _previousPressure2_1Changed = _previousPressure2_2Changed;
-
-    _previousPressure2_2 = pressure2;
-    _previousPressure2_2Changed = millis();
+    _previousPressure1 = pressure1;
   }
 
-  const uint32_t closedPressure = 42000;
-  const uint32_t limitPressure = 115000;
-  const uint32_t pressureDelta = 1000;
-  const uint32_t pressureUpDownDelta = 6000;
-  const uint32_t pressureOver = 2000;
+  const uint32_t closedPressure2 = 42000;
+  const uint32_t limitPressure2 = 115000;
+  const uint32_t pressureDelta = 2000;
+  const uint32_t pressureIdleDelta = 4000;
   const uint32_t maxPressure = 180000;
+  const uint32_t blowoffDelta = 5000;
+
+  const uint8_t closeDelay = 100;
+  const uint8_t openDelay = 50;
 
   const uint8_t boostOffTemperature = 80;
   const uint8_t boostLowerTemperature = 75;
 
-  uint32_t _normalPressure = 100000;
+  uint8_t _position, _minPercent;
+  unsigned long _positionChanged, _minPercentChanged, _logLimit, _logBlowoff;
 
-  uint8_t _percent, _minPercent;
-  unsigned long _percentChanged, _minPercentChanged;
-
-  uint32_t _pressure1Want;
-  unsigned long _pressure1WantChanged;
-
-  directionType _direction;
-
-  bool _reached;
-
-  uint32_t _previousPressure2_1, _previousPressure2_2;
-  unsigned long _previousPressure2Changed, _previousPressure2_1Changed,
-      _previousPressure2_2Changed;
+  uint32_t _previousPressure1;
+  unsigned long _previousPressure1Changed;
 };

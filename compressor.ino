@@ -25,22 +25,23 @@ const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = true;
-const bool LOG_SENSOR = true;
+const bool LOG_PRESSURE = true;
 const bool LOG_SENSOR_RAW = false;
-const bool LOG_THROTTLE = true;
+const bool LOG_POSITION = true;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
-const bool LOG_CONTROLLER = true;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_CONSUMPTION = false;
+const bool LOG_IDLE = true;
+const bool LOG_COMPRESSOR_STATUS = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
 
-const uint8_t PUMP_ON_TEMPERATURE = 45;
-const uint8_t PUMP_OFF_TEMPERATURE = 23;
+const uint8_t PUMP_ON_TEMPERATURE = 35;
+const uint8_t PUMP_OFF_TEMPERATURE = 30;
 
 const uint8_t COOLER_ON_TEMPERATURE = 45;
 const uint8_t COOLER_OFF_TEMPERATURE = 23;
@@ -52,7 +53,12 @@ const uint8_t L_PWM_PIN = 5;
 const uint8_t BEEP_PIN = 10;
 
 TimerMs poweroffCheck(100, true, false);
-TimerMs logCheck(1000, true, false);
+TimerMs logMain(100, true, false);
+TimerMs logTemp(1000, true, false);
+TimerMs logPressure(100, true, false);
+TimerMs logPosition(100, true, false);
+TimerMs logIdle(500, true, false);
+TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs consumptionCheck(500, true, false);
 
@@ -115,10 +121,6 @@ ConsumptionControl consumption(ACS_VIRTUAL_PIN, R_IS_L_IS_VIRTUAL_PIN,
 
 void setup() {
   Serial.begin(115200);
-
-  if (!USE_EMULATOR) {
-    cntrl.setNormalPressure(sens1.pressure());
-  }
 
   if (!USE_CALIBRATE) {
     thr.check();
@@ -201,7 +203,7 @@ void loopCalibrate() {
       break;
     }
 
-    if (logCheck.tick()) {
+    if (logMain.tick()) {
       Serial.print("throttle position:");
       Serial.println(thr.position());
 
@@ -294,7 +296,7 @@ void loopNormal() {
     }
   }
 
-  if (logCheck.tick()) {
+  if (logMain.tick()) {
     log();
   }
 
@@ -325,12 +327,12 @@ void loopNormal() {
 }
 
 void log() {
-  if (LOG_TEMPERATURE) {
+  if (LOG_TEMPERATURE && logTemp.tick()) {
     Serial.print(">sens1 temperature:");
     Serial.println(sens1.temperature());
   }
 
-  if (LOG_SENSOR) {
+  if (LOG_PRESSURE && logPressure.tick()) {
     if (USE_EMULATOR) {
       Serial.print(">sens1 emulated pressure (pa):");
       Serial.println(emul1.pressure());
@@ -346,115 +348,103 @@ void log() {
     }
   }
 
-  if (LOG_SENSOR_RAW) {
-    Serial.print(">sens1 pressure (mm):");
-    Serial.println(sens1.pressureInMM());
-
-    Serial.print(">sens2 pressure (mm):");
-    Serial.println(sens2.pressureInMM());
-
-    Serial.print(">sens1 voltage temp:");
-    Serial.println(sens1.voltageTemp());
-
-    Serial.print(">sens1 voltage map:");
-    Serial.println(sens1.voltageMap());
-
-    Serial.print(">sens2 voltage map:");
-    Serial.println(sens2.voltageMap());
-  }
-
-  if (LOG_THROTTLE) {
+  if (LOG_POSITION && logPosition.tick()) {
     Serial.print(">throttle position:");
     Serial.println(thr.position());
   }
 
-  if (LOG_THROTTLE_RAW) {
-    Serial.print(">throttle 1 voltage:");
-    Serial.println(thr.voltagePosition1());
-
-    Serial.print(">throttle 2 voltage:");
-    Serial.println(thr.voltagePosition2());
+  if (LOG_IDLE && logIdle.tick()) {
+    if (USE_EMULATOR) {
+      Serial.print(">controller engine idle:");
+      Serial.println(cntrl.isEngineIdle(emul2.pressure()));
+    } else {
+      Serial.print(">controller engine idle:");
+      Serial.println(cntrl.isEngineIdle(sens2.pressure()));
+    }
   }
 
-  if (LOG_THROTTLE_INTERNAL) {
-    Serial.print(">throttle status:");
-    Serial.println(thr.status());
+  if (logOther.tick()) {
+    if (LOG_COMPRESSOR_STATUS) {
+      Serial.print(">compressor status: ");
+      Serial.println(compressor.status());
+    }
 
-    Serial.print(">throttle speed:");
-    Serial.println(thr.speed());
+    if (LOG_SENSOR_RAW) {
+      Serial.print(">sens1 pressure (mm):");
+      Serial.println(sens1.pressureInMM());
 
-    Serial.print(">throttle hold status:");
-    Serial.println(thr.holdStatus());
+      Serial.print(">sens2 pressure (mm):");
+      Serial.println(sens2.pressureInMM());
 
-    Serial.print(">throttle hold position:");
-    Serial.println(thr.holdPosition());
+      Serial.print(">sens1 voltage temp:");
+      Serial.println(sens1.voltageTemp());
 
-    Serial.print(">throttle hold reached:");
-    Serial.println(thr.holdReached());
+      Serial.print(">sens1 voltage map:");
+      Serial.println(sens1.voltageMap());
 
-    Serial.print(">throttle hold direction:");
-    Serial.println(thr.holdDirection());
-  }
+      Serial.print(">sens2 voltage map:");
+      Serial.println(sens2.voltageMap());
+    }
 
-  if (USE_EMULATOR && LOG_EMULATOR) {
-    Serial.print(">emulator throttle position:");
-    Serial.println(emul1.throttle());
+    if (LOG_THROTTLE_RAW) {
+      Serial.print(">throttle 1 voltage:");
+      Serial.println(thr.voltagePosition1());
 
-    Serial.print(">emulator rpm:");
-    Serial.println(emul1.rpm());
-  }
+      Serial.print(">throttle 2 voltage:");
+      Serial.println(thr.voltagePosition2());
+    }
 
-  if (USE_EMULATOR && LOG_EMULATOR_INTERNAL) {
-    Serial.print(">emulator efficiency:");
-    Serial.println(emul1.efficiency());
+    if (LOG_THROTTLE_INTERNAL) {
+      Serial.print(">throttle status:");
+      Serial.println(thr.status());
 
-    Serial.print(">emulator pressure clear:");
-    Serial.println(emul1.pressureClear());
+      Serial.print(">throttle speed:");
+      Serial.println(thr.speed());
 
-    Serial.print(">emulator voltage:");
-    Serial.println(emul1.voltage());
-  }
+      Serial.print(">throttle hold status:");
+      Serial.println(thr.holdStatus());
 
-  if (LOG_CONTROLLER) {
-    Serial.print(">controller pressure 1 want:");
-    Serial.println(cntrl.pressure1Want());
+      Serial.print(">throttle hold position:");
+      Serial.println(thr.holdPosition());
+
+      Serial.print(">throttle hold reached:");
+      Serial.println(thr.holdReached());
+
+      Serial.print(">throttle hold direction:");
+      Serial.println(thr.holdDirection());
+    }
+
+    if (USE_EMULATOR && LOG_EMULATOR) {
+      Serial.print(">emulator throttle position:");
+      Serial.println(emul1.throttle());
+
+      Serial.print(">emulator rpm:");
+      Serial.println(emul1.rpm());
+    }
+
+    if (USE_EMULATOR && LOG_EMULATOR_INTERNAL) {
+      Serial.print(">emulator efficiency:");
+      Serial.println(emul1.efficiency());
+
+      Serial.print(">emulator pressure clear:");
+      Serial.println(emul1.pressureClear());
+
+      Serial.print(">emulator voltage:");
+      Serial.println(emul1.voltage());
+    }
 
     if (LOG_CONTROLLER_INTERNAL) {
       Serial.print(">controller position:");
       Serial.println(cntrl.positionVal());
-
-      Serial.print(">controller direction:");
-      Serial.println(cntrl.direction());
-
-      Serial.print(">controller reached:");
-      Serial.println(cntrl.reached());
-
-      if (USE_EMULATOR) {
-        uint32_t pressure2 = emul2.pressure();
-
-        Serial.print(">controller is pressure2 up:");
-        Serial.println(cntrl.isPressure2Up(pressure2));
-
-        Serial.print(">controller is pressure2 down:");
-        Serial.println(cntrl.isPressure2Down(pressure2));
-      } else {
-        uint32_t pressure2 = sens2.pressure();
-
-        Serial.print(">controller is pressure2 up:");
-        Serial.println(cntrl.isPressure2Up(pressure2));
-
-        Serial.print(">controller is pressure2 down:");
-        Serial.println(cntrl.isPressure2Down(pressure2));
-      }
     }
-  }
 
-  if (LOG_CONSUMPTION) {
-    Serial.print(">consumption ACS:");
-    Serial.println(consumption.consumptionACS());
+    if (LOG_CONSUMPTION) {
+      Serial.print(">consumption ACS:");
+      Serial.println(consumption.consumptionACS());
 
-    Serial.print(">consumption IS:");
-    Serial.println(consumption.consumptionIS());
+      Serial.print(">consumption IS:");
+      Serial.println(consumption.consumptionIS());
+    }
   }
 }
 

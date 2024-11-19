@@ -5,6 +5,10 @@ public:
     digitalWrite(_pin, OFF);
   }
 
+  bool status() {
+    return _on;
+  }
+
   void poweron() {
     if (_on) {
       return;
