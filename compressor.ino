@@ -24,7 +24,7 @@ const uint8_t MAP2_PIN = A3;
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_TEMPERATURE = true;
+const bool LOG_TEMPERATURE = false;
 const bool LOG_PRESSURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
@@ -35,7 +35,7 @@ const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_CONSUMPTION = false;
 const bool LOG_IDLE = true;
-const bool LOG_COMPRESSOR_STATUS = true;
+const bool LOG_COMPRESSOR_STATUS = false;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
@@ -114,15 +114,27 @@ Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN,
                 MUX_GND_VIRTUAL_PIN);
 
 const uint8_t R_IS_L_IS_VIRTUAL_PIN = 1;
-const uint8_t ACS_VIRTUAL_PIN = 2;
+const uint8_t COMPRESSOR_CONSUMPTION_VIRTUAL_PIN = 2;
 
-ConsumptionControl consumption(ACS_VIRTUAL_PIN, R_IS_L_IS_VIRTUAL_PIN,
+ConsumptionControl consumption(COMPRESSOR_CONSUMPTION_VIRTUAL_PIN, 100,
                                &muxRead);
 
 void setup() {
   Serial.begin(115200);
 
   if (!USE_CALIBRATE) {
+    tControlPump.control(PUMP_ON_TEMPERATURE);
+    delay(2000);
+    tControlPump.control(PUMP_OFF_TEMPERATURE);
+
+    tControlCooler.control(COOLER_ON_TEMPERATURE);
+    delay(2000);
+    tControlCooler.control(COOLER_OFF_TEMPERATURE);
+
+    compressor.poweron();
+    delay(2000);
+    compressor.poweroff();
+
     thr.check();
   }
 }
@@ -146,10 +158,20 @@ void loopCalibrate() {
 
   tControlCooler.control(COOLER_OFF_TEMPERATURE);
 
+  Serial.print("consumption compressor:");
+  Serial.println(consumption.consumption());
+
   compressor.poweron();
   delay(1000);
+
+  Serial.print("consumption compressor:");
+  Serial.println(consumption.consumption());
+
   compressor.poweroff();
   delay(1000);
+
+  Serial.print("consumption compressor:");
+  Serial.println(consumption.consumption());
 
   for (uint8_t i = 0; i < 5; i++) {
     Serial.print("poweroff need:");
@@ -230,12 +252,6 @@ void loopCalibrate() {
 
       Serial.print("throttle hold direction:");
       Serial.println(thr.holdDirection());
-
-      Serial.print("consumption ACS:");
-      Serial.println(consumption.consumptionACS());
-
-      Serial.print("consumption IS:");
-      Serial.println(consumption.consumptionIS());
     }
 
     if (millis() - _started > 30000) {
@@ -260,7 +276,7 @@ void loopNormal() {
 
   if (!thr.control()) {
     if (!failed) {
-      Serial.print("Fail state: ");
+      Serial.print("Fail state code: ");
       Serial.println(thr.failStateCode());
 
       failed = true;
@@ -311,8 +327,8 @@ void loopNormal() {
 
   if (consumptionCheck.tick() && !failed && !poweredoff) {
     if (consumption.failed()) {
-      // TODO FIX code
-      Serial.println("Fail state: 12");
+      Serial.print("Failed compressor: no consumption, current=");
+      Serial.println(consumption.consumption());
 
       failed = true;
 
@@ -321,7 +337,7 @@ void loopNormal() {
 
       compressor.poweroff();
 
-      err.error(12);
+      err.error(Errors::ERR_COMPRESSOR_CONSUMPTION);
     }
   }
 }
@@ -439,11 +455,8 @@ void log() {
     }
 
     if (LOG_CONSUMPTION) {
-      Serial.print(">consumption ACS:");
-      Serial.println(consumption.consumptionACS());
-
-      Serial.print(">consumption IS:");
-      Serial.println(consumption.consumptionIS());
+      Serial.print(">consumption compressor:");
+      Serial.println(consumption.consumption());
     }
   }
 }

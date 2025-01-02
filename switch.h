@@ -30,8 +30,8 @@ public:
 private:
   const uint8_t _pin;
 
-  const uint8_t ON = LOW;
-  const uint8_t OFF = HIGH;
+  const uint8_t ON = HIGH;
+  const uint8_t OFF = LOW;
 
   bool _on = false;
 };

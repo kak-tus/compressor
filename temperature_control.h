@@ -65,8 +65,8 @@ private:
   const int8_t _onTemp, _offTemp;
   const bool _isPWM;
 
-  const uint8_t ON = LOW;
-  const uint8_t OFF = HIGH;
+  const uint8_t ON = HIGH;
+  const uint8_t OFF = LOW;
 
   bool _on = false;
 

@@ -3,6 +3,8 @@
 #define PID_INTEGER
 #include <GyverPID.h>
 
+#include "errors.h"
+
 class Throttle {
 public:
   Throttle(uint8_t position1Pin, uint8_t position2Pin, uint8_t en, uint8_t lPwm,
@@ -65,12 +67,12 @@ public:
       open(val);
 
       if (!sensorsOk()) {
-        _fail(1);
+        _fail(Errors::ERR_THR_CHECK_1);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _fail(2);
+        _fail(Errors::ERR_THR_CHECK_2);
         return;
       }
     }
@@ -88,12 +90,12 @@ public:
       close(val);
 
       if (!sensorsOk()) {
-        _fail(3);
+        _fail(Errors::ERR_THR_CHECK_3);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _fail(4);
+        _fail(Errors::ERR_THR_CHECK_4);
         return;
       }
     }
@@ -111,12 +113,12 @@ public:
       open(val);
 
       if (!sensorsOk()) {
-        _fail(5);
+        _fail(Errors::ERR_THR_CHECK_5);
         return;
       }
 
       if (timeout(start, _operationLimit)) {
-        _fail(6);
+        _fail(Errors::ERR_THR_CHECK_6);
         return;
       }
     }
@@ -148,7 +150,7 @@ public:
         uint8_t _currPos = position();
 
         if (!sensorsOk()) {
-          _fail(7);
+          _fail(Errors::ERR_THR_SENSORS_1);
           return false;
         }
 
@@ -175,7 +177,7 @@ public:
       uint8_t _currPos = position();
 
       if (!sensorsOk()) {
-        _fail(8);
+        _fail(Errors::ERR_THR_SENSORS_2);
         return;
       }
 
@@ -202,7 +204,7 @@ public:
     uint8_t _currPos = position();
 
     if (!sensorsOk()) {
-      _fail(9);
+      _fail(Errors::ERR_THR_SENSORS_3);
       return;
     }
 
@@ -264,6 +266,17 @@ public:
     _holdStatus = IN_POWEROFF;
     _motor.Enable();
     setRegulator(100, OPEN);
+  }
+
+  void measureConsumption() {
+    _motor.Enable();
+
+    for (;;) {
+      _motor.TurnLeft(speedMaxOpen);
+      delay(5000);
+      _motor.TurnRight(speedMaxOpen);
+      delay(5000);
+    }
   }
 
 private:
@@ -367,7 +380,7 @@ private:
     uint8_t pos = position();
 
     if (!sensorsOk()) {
-      _fail(10);
+      _fail(Errors::ERR_THR_SENSORS_4);
       return false;
     }
 
@@ -404,7 +417,7 @@ private:
     uint8_t pos = position();
 
     if (!sensorsOk()) {
-      _fail(11);
+      _fail(Errors::ERR_THR_SENSORS_5);
       return false;
     }
 

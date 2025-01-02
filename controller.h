@@ -10,16 +10,9 @@ public:
   }
 
   uint8_t position(uint32_t pressure1, uint32_t pressure2) {
-    setPreviousPressure1(pressure1);
+    setPreviousPressure(pressure1, pressure2);
 
-    if (pressure2 > limitPressure2 + pressureDelta) {
-      if (timeout(_logLimit, 1000)) {
-        Serial.print("Pressure limit: ");
-        Serial.println(pressure2);
-      }
-
-      incPosition();
-    } else if (isBlowoff(pressure1)) {
+    if (isBlowoff(pressure1)) {
       if (timeout(_logBlowoff, 1000)) {
         Serial.print("Blowoff: from ");
         Serial.print(_previousPressure1);
@@ -28,6 +21,13 @@ public:
       }
 
       setPosition(100);
+    } else if (pressure2 > limitPressure2 + pressureDelta) {
+      if (timeout(_logLimit, 1000)) {
+        Serial.print("Pressure limit: ");
+        Serial.println(pressure2);
+      }
+
+      incPosition();
     } else if (isEngineIdle(pressure2)) {
       setPosition(100);
     } else {
@@ -62,9 +62,15 @@ public:
       return false;
     } else if (pressure2 > closedPressure2 + pressureIdleDelta) {
       return false;
-    } else {
-      return true;
     }
+
+    if (_previousPressure2 < closedPressure2 - pressureIdleDelta) {
+      return false;
+    } else if (_previousPressure2 > closedPressure2 + pressureIdleDelta) {
+      return false;
+    }
+
+    return true;
   }
 
   bool isBlowoff(uint32_t pressure1) {
@@ -117,14 +123,15 @@ private:
     _position = 100;
   }
 
-  void setPreviousPressure1(uint32_t pressure1) {
-    if (!timeout(_previousPressure1Changed, 100)) {
+  void setPreviousPressure(uint32_t pressure1, uint32_t pressure2) {
+    if (!timeout(_previousPressureChanged, 100)) {
       return;
     }
 
-    _previousPressure1Changed = millis();
+    _previousPressureChanged = millis();
 
     _previousPressure1 = pressure1;
+    _previousPressure2 = pressure2;
   }
 
   const uint32_t closedPressure2 = 42000;
@@ -132,10 +139,10 @@ private:
   const uint32_t pressureDelta = 2000;
   const uint32_t pressureIdleDelta = 4000;
   const uint32_t maxPressure = 180000;
-  const uint32_t blowoffDelta = 5000;
+  const uint32_t blowoffDelta = 10000;
 
-  const uint8_t closeDelay = 100;
-  const uint8_t openDelay = 50;
+  const uint8_t closeDelay = 10;
+  const uint8_t openDelay = 10;
 
   const uint8_t boostOffTemperature = 80;
   const uint8_t boostLowerTemperature = 75;
@@ -143,6 +150,6 @@ private:
   uint8_t _position, _minPercent;
   unsigned long _positionChanged, _minPercentChanged, _logLimit, _logBlowoff;
 
-  uint32_t _previousPressure1;
-  unsigned long _previousPressure1Changed;
+  uint32_t _previousPressure1, _previousPressure2;
+  unsigned long _previousPressureChanged;
 };
