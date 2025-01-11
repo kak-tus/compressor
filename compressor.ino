@@ -28,7 +28,7 @@ const bool LOG_TEMPERATURE = false;
 const bool LOG_PRESSURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
-const bool LOG_THROTTLE_RAW = false;
+const bool LOG_THROTTLE_RAW = true;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
@@ -53,7 +53,7 @@ const uint8_t L_PWM_PIN = 5;
 const uint8_t BEEP_PIN = 10;
 
 TimerMs poweroffCheck(100, true, false);
-TimerMs logMain(100, true, false);
+TimerMs logMain(1000, true, false);
 TimerMs logTemp(1000, true, false);
 TimerMs logPressure(100, true, false);
 TimerMs logPosition(100, true, false);
@@ -66,7 +66,8 @@ PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
 const int16_t sensor1MapCorrection = 0;
-const int16_t sensor2MapCorrection = 0;
+// Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
+const int16_t sensor2MapCorrection = -1970;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
@@ -101,7 +102,7 @@ const uint8_t COMPRESSOR_PIN = 4;
 
 Switch compressor(COMPRESSOR_PIN);
 
-const bool USE_CALIBRATE = false;
+const bool USE_CALIBRATE = true;
 Calibrate clbr;
 
 const uint8_t MUX_Z_PIN = A5;
@@ -124,15 +125,15 @@ void setup() {
 
   if (!USE_CALIBRATE) {
     tControlPump.control(PUMP_ON_TEMPERATURE);
-    delay(2000);
+    delay(1000);
     tControlPump.control(PUMP_OFF_TEMPERATURE);
 
     tControlCooler.control(COOLER_ON_TEMPERATURE);
-    delay(2000);
+    delay(1000);
     tControlCooler.control(COOLER_OFF_TEMPERATURE);
 
     compressor.poweron();
-    delay(2000);
+    delay(1000);
     compressor.poweroff();
 
     thr.check();
@@ -148,15 +149,29 @@ void loop() {
 }
 
 void loopCalibrate() {
-  tControlPump.control(PUMP_ON_TEMPERATURE);
-  delay(2000);
+  Serial.println("Test pump");
 
+  Serial.print("sens1 temperature:");
+  Serial.println(sens1.temperature());
+  Serial.print("sens1 voltage temp:");
+  Serial.println(sens1.voltageTemp());
+
+  tControlPump.control(PUMP_ON_TEMPERATURE);
+  delay(5000);
   tControlPump.poweroff();
+
+  Serial.print("sens1 temperature:");
+  Serial.println(sens1.temperature());
+  Serial.print("sens1 voltage temp:");
+  Serial.println(sens1.voltageTemp());
+
+  Serial.println("Test cooler");
 
   tControlCooler.control(COOLER_ON_TEMPERATURE);
   delay(1000);
-
   tControlCooler.control(COOLER_OFF_TEMPERATURE);
+
+  Serial.println("Test compressor");
 
   Serial.print("consumption compressor:");
   Serial.println(consumption.consumption());
@@ -173,11 +188,15 @@ void loopCalibrate() {
   Serial.print("consumption compressor:");
   Serial.println(consumption.consumption());
 
+  Serial.println("Test poweroff button");
+
   for (uint8_t i = 0; i < 5; i++) {
     Serial.print("poweroff need:");
     Serial.println(powerOff.need());
     delay(1000);
   }
+
+  Serial.println("Test poweroff led");
 
   for (uint8_t i = 0; i < 5; i++) {
     powerOffNotify.poweroff();
@@ -185,6 +204,8 @@ void loopCalibrate() {
     powerOffNotify.poweron();
     delay(500);
   }
+
+  Serial.println("Test sensors");
 
   Serial.print("sens1 temperature:");
   Serial.println(sens1.temperature());
@@ -205,14 +226,58 @@ void loopCalibrate() {
   Serial.print("sens2 voltage map:");
   Serial.println(sens2.voltageMap());
 
-  Serial.print("throttle position:");
-  Serial.println(thr.position());
+  Serial.println("Throttle calibrate close");
 
   Serial.print("throttle 1 voltage:");
   Serial.println(thr.voltagePosition1());
 
   Serial.print("throttle 2 voltage:");
   Serial.println(thr.voltagePosition2());
+
+  Serial.print("throttle voltage sum:");
+  Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
+
+  thr.calibrateClose();
+
+  for (uint8_t i = 0; i < 10; i++) {
+    Serial.print("throttle 1 voltage:");
+    Serial.println(thr.voltagePosition1());
+
+    Serial.print("throttle 2 voltage:");
+    Serial.println(thr.voltagePosition2());
+
+    Serial.print("throttle voltage sum:");
+    Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
+
+    delay(100);
+  }
+
+  Serial.println("Throttle calibrate open");
+
+  Serial.print("throttle 1 voltage:");
+  Serial.println(thr.voltagePosition1());
+
+  Serial.print("throttle 2 voltage:");
+  Serial.println(thr.voltagePosition2());
+
+  thr.calibrateOpen();
+
+  for (uint8_t i = 0; i < 10; i++) {
+    Serial.print("throttle 1 voltage:");
+    Serial.println(thr.voltagePosition1());
+
+    Serial.print("throttle 2 voltage:");
+    Serial.println(thr.voltagePosition2());
+
+    Serial.print("throttle voltage sum:");
+    Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
+
+    delay(100);
+  }
+
+  thr.calibrateStop();
+
+  Serial.println("Throttle calibrate hold");
 
   unsigned long _started = millis();
 
@@ -235,6 +300,9 @@ void loopCalibrate() {
       Serial.print("throttle 2 voltage:");
       Serial.println(thr.voltagePosition2());
 
+      Serial.print("throttle voltage sum:");
+      Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
+
       Serial.print("throttle status:");
       Serial.println(thr.status());
 
@@ -254,12 +322,12 @@ void loopCalibrate() {
       Serial.println(thr.holdDirection());
     }
 
-    if (millis() - _started > 30000) {
+    if (millis() - _started > 5000) {
       break;
     }
   }
 
-  delay(30000);
+  delay(60000);
 }
 
 void loopNormal() {
@@ -271,6 +339,7 @@ void loopNormal() {
       thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
     } else {
       thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
+      // thr.hold(0);
     }
   }
 
@@ -408,6 +477,9 @@ void log() {
 
       Serial.print(">throttle 2 voltage:");
       Serial.println(thr.voltagePosition2());
+
+      Serial.print(">throttle voltage sum:");
+      Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
     }
 
     if (LOG_THROTTLE_INTERNAL) {

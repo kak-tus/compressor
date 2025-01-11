@@ -1,7 +1,7 @@
 class Calibrate {
 public:
   uint8_t position() {
-    if (timeout(_changed, 200)) {
+    if (timeout(_changed, 300)) {
       _changed = millis();
 
       if (_to == 0) {

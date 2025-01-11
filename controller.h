@@ -14,6 +14,8 @@ public:
 
     if (isBlowoff(pressure1)) {
       if (timeout(_logBlowoff, 1000)) {
+        _logBlowoff = millis();
+
         Serial.print("Blowoff: from ");
         Serial.print(_previousPressure1);
         Serial.print(" to ");
@@ -23,6 +25,8 @@ public:
       setPosition(100);
     } else if (pressure2 > limitPressure2 + pressureDelta) {
       if (timeout(_logLimit, 1000)) {
+        _logLimit = millis();
+
         Serial.print("Pressure limit: ");
         Serial.println(pressure2);
       }
@@ -59,14 +63,22 @@ public:
 
   bool isEngineIdle(uint32_t pressure2) {
     if (pressure2 < closedPressure2 - pressureIdleDelta) {
+      _idleSwitchedOffAt = millis();
       return false;
     } else if (pressure2 > closedPressure2 + pressureIdleDelta) {
+      _idleSwitchedOffAt = millis();
       return false;
     }
 
     if (_previousPressure2 < closedPressure2 - pressureIdleDelta) {
+      _idleSwitchedOffAt = millis();
       return false;
     } else if (_previousPressure2 > closedPressure2 + pressureIdleDelta) {
+      _idleSwitchedOffAt = millis();
+      return false;
+    }
+
+    if (!timeout(_idleSwitchedOffAt, idleSwitchOnTimeout)) {
       return false;
     }
 
@@ -138,11 +150,10 @@ private:
   const uint32_t limitPressure2 = 115000;
   const uint32_t pressureDelta = 2000;
   const uint32_t pressureIdleDelta = 4000;
-  const uint32_t maxPressure = 180000;
   const uint32_t blowoffDelta = 10000;
 
   const uint8_t closeDelay = 10;
-  const uint8_t openDelay = 10;
+  const uint8_t openDelay = 5;
 
   const uint8_t boostOffTemperature = 80;
   const uint8_t boostLowerTemperature = 75;
@@ -152,4 +163,8 @@ private:
 
   uint32_t _previousPressure1, _previousPressure2;
   unsigned long _previousPressureChanged;
+
+  bool _isIdle = true;
+  unsigned long _idleSwitchedOffAt;
+  const uint16_t idleSwitchOnTimeout = 500;
 };

@@ -268,23 +268,26 @@ public:
     setRegulator(100, OPEN);
   }
 
-  void measureConsumption() {
+  void calibrateClose() {
     _motor.Enable();
 
-    for (;;) {
-      _motor.TurnLeft(speedMaxOpen);
-      delay(5000);
-      _motor.TurnRight(speedMaxOpen);
-      delay(5000);
-    }
+    _motor.TurnLeft(speedMaxClose);
   }
+
+  void calibrateOpen() {
+    _motor.Enable();
+
+    _motor.TurnRight(speedMaxOpen);
+  }
+
+  void calibrateStop() { _motor.Stop(); }
 
 private:
   // Call sensorsOk only after position() call
   bool sensorsOk() {
-    // Use stored _pos values - assume that sensorsOk called only after
+    // Use stored voltage values - assume that sensorsOk called only after
     // position()
-    if (abs(_pos1 - _pos2) >= sensorsOkDelta) {
+    if (abs(1024 - (_voltagePos1 + _voltagePos2)) > sensorsOkVoltageDelta) {
       return false;
     }
 
@@ -447,7 +450,7 @@ private:
   uint16_t minVoltageSens2 = 120;
   uint16_t maxVoltageSens2 = 840;
 
-  const uint8_t sensorsOkDelta = 10;
+  const uint8_t sensorsOkVoltageDelta = 5;
 
   BTS7960 _motor;
 
