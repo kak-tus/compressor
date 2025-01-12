@@ -147,7 +147,7 @@ private:
   }
 
   const uint32_t closedPressure2 = 42000;
-  const uint32_t limitPressure2 = 115000;
+  const uint32_t limitPressure2 = 170000;
   const uint32_t pressureDelta = 2000;
   const uint32_t pressureIdleDelta = 4000;
   const uint32_t blowoffDelta = 10000;
@@ -164,7 +164,6 @@ private:
   uint32_t _previousPressure1, _previousPressure2;
   unsigned long _previousPressureChanged;
 
-  bool _isIdle = true;
   unsigned long _idleSwitchedOffAt;
   const uint16_t idleSwitchOnTimeout = 500;
 };
