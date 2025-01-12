@@ -30,15 +30,6 @@ public:
 
     _voltagePos2 = analogRead(_pos2Pin);
 
-    if (_voltagePos2 < minVoltageSens2 + delta) {
-      _pos2 = 100;
-    } else if (_voltagePos2 > maxVoltageSens2 - delta) {
-      _pos2 = 0;
-    } else {
-      _pos2 = 100 - (uint32_t)(_voltagePos2 - minVoltageSens2) * 100 /
-                        (maxVoltageSens2 - minVoltageSens2);
-    }
-
     return _pos1;
   }
 
@@ -66,7 +57,7 @@ public:
       int val = regulator.getResultTimer();
       open(val);
 
-      if (!sensorsOk()) {
+      if (!sensorsStartupOk()) {
         _fail(Errors::ERR_THR_CHECK_1);
         return;
       }
@@ -89,7 +80,7 @@ public:
       int val = regulator.getResultTimer();
       close(val);
 
-      if (!sensorsOk()) {
+      if (!sensorsStartupOk()) {
         _fail(Errors::ERR_THR_CHECK_3);
         return;
       }
@@ -112,7 +103,7 @@ public:
       int val = regulator.getResultTimer();
       open(val);
 
-      if (!sensorsOk()) {
+      if (!sensorsStartupOk()) {
         _fail(Errors::ERR_THR_CHECK_5);
         return;
       }
@@ -283,11 +274,22 @@ public:
   void calibrateStop() { _motor.Stop(); }
 
 private:
-  // Call sensorsOk only after position() call
+  // Call only after position() call
   bool sensorsOk() {
     // Use stored voltage values - assume that sensorsOk called only after
     // position()
-    if (abs(1024 - (_voltagePos1 + _voltagePos2)) > sensorsOkVoltageDelta) {
+    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) > sensorsOkVoltageDelta) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // Call only after position() call
+  bool sensorsStartupOk() {
+    // Use stored voltage values - assume that sensorsStartupOk called only after
+    // position()
+    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) > sensorsStartupOkVoltageDelta) {
       return false;
     }
 
@@ -298,8 +300,6 @@ private:
     Serial.print("Fail data:");
     Serial.print(" pos1=");
     Serial.print(_pos1);
-    Serial.print(" pos2=");
-    Serial.print(_pos2);
     Serial.print(" voltagePos1=");
     Serial.print(_voltagePos1);
     Serial.print(" voltagePos2=");
@@ -439,7 +439,7 @@ private:
   const uint8_t _pos1Pin, _pos2Pin;
 
   uint16_t _voltagePos1, _voltagePos2;
-  uint8_t _pos1, _pos2;
+  uint8_t _pos1;
 
   // Use delta to guarantee get 100% open and 0% close
   const uint8_t delta = 5;
@@ -450,7 +450,8 @@ private:
   uint16_t minVoltageSens2 = 120;
   uint16_t maxVoltageSens2 = 840;
 
-  const uint8_t sensorsOkVoltageDelta = 5;
+const uint8_t sensorsStartupOkVoltageDelta = 50;
+  const uint8_t sensorsOkVoltageDelta = 30;
 
   BTS7960 _motor;
 
