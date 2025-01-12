@@ -28,7 +28,7 @@ const bool LOG_TEMPERATURE = false;
 const bool LOG_PRESSURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
-const bool LOG_THROTTLE_RAW = true;
+const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
@@ -67,7 +67,7 @@ PowerOffNotify powerOffNotify;
 
 const int16_t sensor1MapCorrection = 0;
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-const int16_t sensor2MapCorrection = -1970;
+const int16_t sensor2MapCorrection = 2758;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
@@ -102,7 +102,7 @@ const uint8_t COMPRESSOR_PIN = 4;
 
 Switch compressor(COMPRESSOR_PIN);
 
-const bool USE_CALIBRATE = true;
+const bool USE_CALIBRATE = false;
 Calibrate clbr;
 
 const uint8_t MUX_Z_PIN = A5;
