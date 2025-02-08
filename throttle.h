@@ -18,6 +18,7 @@ public:
 
   uint8_t position() {
     _voltagePos1 = analogRead(_pos1Pin);
+    _voltagePos2 = analogRead(_pos2Pin);
 
     if (_voltagePos1 < minVoltageSens1 + delta) {
       _pos1 = 0;
@@ -28,7 +29,6 @@ public:
               (maxVoltageSens1 - minVoltageSens1);
     }
 
-    _voltagePos2 = analogRead(_pos2Pin);
 
     return _pos1;
   }
@@ -262,13 +262,13 @@ public:
   void calibrateClose() {
     _motor.Enable();
 
-    _motor.TurnLeft(speedMaxClose);
+    _motor.TurnLeft(speedMinClose);
   }
 
   void calibrateOpen() {
     _motor.Enable();
 
-    _motor.TurnRight(speedMaxOpen);
+    _motor.TurnRight(speedMinOpen);
   }
 
   void calibrateStop() { _motor.Stop(); }
@@ -278,7 +278,8 @@ private:
   bool sensorsOk() {
     // Use stored voltage values - assume that sensorsOk called only after
     // position()
-    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) > sensorsOkVoltageDelta) {
+    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) >
+        sensorsOkVoltageDelta) {
       return false;
     }
 
@@ -287,9 +288,10 @@ private:
 
   // Call only after position() call
   bool sensorsStartupOk() {
-    // Use stored voltage values - assume that sensorsStartupOk called only after
-    // position()
-    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) > sensorsStartupOkVoltageDelta) {
+    // Use stored voltage values - assume that sensorsStartupOk called only
+    // after position()
+    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) >
+        sensorsStartupOkVoltageDelta) {
       return false;
     }
 
@@ -450,7 +452,7 @@ private:
   uint16_t minVoltageSens2 = 120;
   uint16_t maxVoltageSens2 = 840;
 
-const uint8_t sensorsStartupOkVoltageDelta = 50;
+  const uint8_t sensorsStartupOkVoltageDelta = 50;
   const uint8_t sensorsOkVoltageDelta = 30;
 
   BTS7960 _motor;
