@@ -11,7 +11,7 @@ public:
     _rpmChangedAt = millis();
   }
 
-  uint32_t pressure() {
+  uint16_t pressure() {
     uint8_t _prevVoltage = _voltage;
 
     _voltage = _mux(_emulatorPin);
@@ -67,19 +67,19 @@ public:
 
     _pressureClear =
         normalPressure +
-        ((uint32_t)_efficiency * (uint32_t)(maxPressure - normalPressure)) /
+        ((uint16_t)_efficiency * (uint16_t)(maxPressure - normalPressure)) /
             100;
 
-    uint32_t _pressureBefore =
-        normalPressure + ((uint32_t)(100 - _throttleRealPos) *
-                          (uint32_t)(_pressureClear - normalPressure)) /
+    uint16_t _pressureBefore =
+        normalPressure + ((uint16_t)(100 - _throttleRealPos) *
+                          (uint16_t)(_pressureClear - normalPressure)) /
                              100;
 
     if (_type == BEFORE_THROTTLE) {
       return _pressureBefore;
     } else {
-      return closedPressure + ((uint32_t)_throttlePos *
-                               (uint32_t)(_pressureBefore - closedPressure)) /
+      return closedPressure + ((uint16_t)_throttlePos *
+                               (uint16_t)(_pressureBefore - closedPressure)) /
                                   100;
     }
   }
@@ -87,7 +87,7 @@ public:
   uint8_t throttle() { return _throttlePos; }
   uint16_t rpm() { return _rpm; }
   uint16_t efficiency() { return _efficiency; }
-  uint32_t pressureClear() { return _pressureClear; }
+  uint16_t pressureClear() { return _pressureClear; }
   uint16_t voltage() { return _voltage; }
 
   void setRealThrottle(uint8_t pos) { _throttleRealPos = pos; }
@@ -113,16 +113,16 @@ private:
 
   const EmulatorType _type;
 
-  const uint32_t closedPressure = 60000;
-  const uint32_t normalPressure = 100000;
-  const uint32_t maxPressure = 180000;
+  const uint16_t closedPressure = 60;
+  const uint16_t normalPressure = 100;
+  const uint16_t maxPressure = 180;
 
   const uint8_t minEfficiency = 5;
   const uint8_t middleEfficiency = 50;
   const uint8_t maxEfficiency = 80;
 
   uint8_t _efficiency;
-  uint32_t _pressureClear;
+  uint16_t _pressureClear;
 
   // Use delta to guarantee get 100% open and 0% close
   const uint8_t delta = 2;

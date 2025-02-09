@@ -9,7 +9,7 @@ public:
     _position = 100;
   }
 
-  uint8_t position(uint32_t pressure1, uint32_t pressure2) {
+  uint8_t position(uint16_t pressure1, uint16_t pressure2) {
     setPreviousPressure(pressure1, pressure2);
 
     if (isBlowoff(pressure1)) {
@@ -41,7 +41,7 @@ public:
     return _position;
   }
 
-  void setTemperature(uint16_t temperature) {
+  void setTemperature(int16_t temperature) {
     if (temperature > boostOffTemperature) {
       _minPercent = 100;
       _minPercentChanged = millis();
@@ -61,7 +61,7 @@ public:
 
   uint8_t positionVal() { return _position; }
 
-  bool isEngineIdle(uint32_t pressure2) {
+  bool isEngineIdle(uint16_t pressure2) {
     if (pressure2 < closedPressure2 - pressureIdleDelta) {
       _idleSwitchedOffAt = millis();
       return false;
@@ -85,7 +85,7 @@ public:
     return true;
   }
 
-  bool isBlowoff(uint32_t pressure1) {
+  bool isBlowoff(uint16_t pressure1) {
     if (pressure1 > _previousPressure1 + blowoffDelta) {
       return true;
     } else {
@@ -135,7 +135,7 @@ private:
     _position = 100;
   }
 
-  void setPreviousPressure(uint32_t pressure1, uint32_t pressure2) {
+  void setPreviousPressure(uint16_t pressure1, uint16_t pressure2) {
     if (!timeout(_previousPressureChanged, 100)) {
       return;
     }
@@ -146,22 +146,22 @@ private:
     _previousPressure2 = pressure2;
   }
 
-  const uint32_t closedPressure2 = 42000;
-  const uint32_t limitPressure2 = 170000;
-  const uint32_t pressureDelta = 2000;
-  const uint32_t pressureIdleDelta = 4000;
-  const uint32_t blowoffDelta = 10000;
+  const uint16_t closedPressure2 = 40;
+  const uint16_t limitPressure2 = 170;
+  const uint16_t pressureDelta = 2;
+  const uint16_t pressureIdleDelta = 4;
+  const uint16_t blowoffDelta = 10;
 
   const uint8_t closeDelay = 10;
   const uint8_t openDelay = 5;
 
-  const uint8_t boostOffTemperature = 80;
-  const uint8_t boostLowerTemperature = 75;
+  const int16_t boostOffTemperature = 80;
+  const int16_t boostLowerTemperature = 75;
 
   uint8_t _position, _minPercent;
   unsigned long _positionChanged, _minPercentChanged, _logLimit, _logBlowoff;
 
-  uint32_t _previousPressure1, _previousPressure2;
+  uint16_t _previousPressure1, _previousPressure2;
   unsigned long _previousPressureChanged;
 
   unsigned long _idleSwitchedOffAt;

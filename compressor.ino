@@ -339,7 +339,6 @@ void loopNormal() {
       thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
     } else {
       thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
-      // thr.hold(0);
     }
   }
 

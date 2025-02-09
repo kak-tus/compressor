@@ -72,15 +72,15 @@ public:
     return int16_t(_temp);
   }
 
-  uint32_t pressure() {
+  uint16_t pressure() {
     _voltageMap = analogRead(_mapPin);
 
-    _pressure = (_voltageMap + deltaMAP) * angleMAP * 1000 + _mapCorrection;
+    _pressure = (_voltageMap + deltaMAP) * angleMAP + _mapCorrection;
 
     return _pressure;
   }
 
-  uint16_t pressureInMM() { return _pressure / kpaToMM; }
+  uint16_t pressureInMM() { return (uint32_t)_pressure * 1000 / kpaToMM; }
   uint16_t voltageMap() { return _voltageMap; }
   uint16_t voltageTemp() { return _voltageTemp; }
 
@@ -103,7 +103,7 @@ private:
   const uint8_t _mapPin;
 
   float _temp;
-  uint32_t _pressure;
+  uint16_t _pressure;
 
   uint16_t _voltageMap, _voltageTemp;
 
