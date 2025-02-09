@@ -1,7 +1,8 @@
 class Sensor {
 public:
-  Sensor(uint8_t tempPin, uint8_t mapPin, int16_t mapCorrection)
-      : _tempPin(tempPin), _mapPin(mapPin), _mapCorrection(mapCorrection) {
+  Sensor(uint8_t tempPin, uint8_t mapPin, float deltaMAP, float angleMAP)
+      : _tempPin(tempPin), _mapPin(mapPin), _deltaMAP(deltaMAP),
+        _angleMAP(angleMAP) {
     pinMode(_tempPin, INPUT);
     pinMode(_mapPin, INPUT);
   }
@@ -75,7 +76,7 @@ public:
   uint16_t pressure() {
     _voltageMap = analogRead(_mapPin);
 
-    _pressure = (_voltageMap + deltaMAP) * angleMAP + _mapCorrection;
+    _pressure = (_voltageMap + _deltaMAP) * _angleMAP;
 
     return _pressure;
   }
@@ -85,17 +86,8 @@ public:
   uint16_t voltageTemp() { return _voltageTemp; }
 
 private:
-  // delta = (voltage2 * pressure1 - voltage1 * pressure2) / (pressure2 -
-  // pressure1)
-  //
-  // angle = (pressure1 - pressure2) / (voltage1 - voltage2)
-  //
-  // Voltages must be native arduino integer values (0-1024)
-  // Pressure - is value in kpa
-  //
-  // nativeVoltage = voltage * 1024 / 5
-  const float deltaMAP = 33.29;
-  const float angleMAP = 0.394;
+  float _deltaMAP;
+  float _angleMAP;
 
   const float kpaToMM = 133.3224;
 
@@ -106,6 +98,4 @@ private:
   uint16_t _pressure;
 
   uint16_t _voltageMap, _voltageTemp;
-
-  int16_t _mapCorrection;
 };

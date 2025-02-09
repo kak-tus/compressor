@@ -65,16 +65,29 @@ TimerMs consumptionCheck(500, true, false);
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
-const int16_t sensor1MapCorrection = 0;
+// delta = (voltage2 * pressure1 - voltage1 * pressure2) / (pressure2 -
+// pressure1)
+//
+// angle = (pressure1 - pressure2) / (voltage1 - voltage2)
+//
+// Voltages must be native arduino integer values (0-1024)
+// Pressure - is value in kpa
+//
+// nativeVoltage = voltage * 1024 / 5
+const float sensor1MapDelta = 33.29;
+const float sensor1MapAngle = 0.394;
+
+// Map sensor 2 is differ from map1
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-const int16_t sensor2MapCorrection = 2758;
+const float sensor2MapDelta = 33.29;
+const float sensor2MapAngle = 0.394;
 
 // Sensor 1 - in sensor, before throttle
-Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapCorrection);
+Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapDelta, sensor1MapAngle);
 // Set same temperature pin as in sens1 because temp from sensor 2 is not used
 // by controller, it used by EBU block
 // Sensor 2 - out sensor, after throttle
-Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapCorrection);
+Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
 
 const bool USE_EMULATOR = false;
 
