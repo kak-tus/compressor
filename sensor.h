@@ -68,7 +68,7 @@ public:
     int16_t rawTemp = tempFrom + (int32_t)(voltageFrom - _voltageTemp) *
                                      tempDiff / voltageDiff;
 
-    _temp += (rawTemp - _temp) * 0.1;
+    _temp += (rawTemp - _temp) * 0.5;
 
     return int16_t(_temp);
   }

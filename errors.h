@@ -5,18 +5,12 @@ class Errors {
 public:
   // 0 - short beep
   // 1 - long beep
-  static const uint8_t ERR_THR_CHECK_1 = 0b0000;
-  static const uint8_t ERR_THR_CHECK_2 = 0b0001;
-  static const uint8_t ERR_THR_CHECK_3 = 0b0010;
-  static const uint8_t ERR_THR_CHECK_4 = 0b0011;
-  static const uint8_t ERR_THR_CHECK_5 = 0b0100;
-  static const uint8_t ERR_THR_CHECK_6 = 0b0101;
-  static const uint8_t ERR_THR_SENSORS_1 = 0b0110;
-  static const uint8_t ERR_THR_SENSORS_2 = 0b0111;
-  static const uint8_t ERR_THR_SENSORS_3 = 0b1000;
-  static const uint8_t ERR_THR_SENSORS_4 = 0b1001;
-  static const uint8_t ERR_THR_SENSORS_5 = 0b1010;
-  static const uint8_t ERR_COMPRESSOR_CONSUMPTION = 0b1011;
+  static const uint8_t ERR_THR_SENSORS_1 = 0b0000;
+  static const uint8_t ERR_THR_SENSORS_2 = 0b0001;
+  static const uint8_t ERR_THR_SENSORS_3 = 0b0010;
+  static const uint8_t ERR_THR_SENSORS_4 = 0b0011;
+  static const uint8_t ERR_THR_SENSORS_5 = 0b0100;
+  static const uint8_t ERR_COMPRESSOR_CONSUMPTION = 0b0101;
 
   Errors(uint8_t pin) : _pin(pin) { pinMode(pin, OUTPUT); }
 

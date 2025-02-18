@@ -13,12 +13,18 @@ public:
     pinMode(_pos1Pin, INPUT);
     pinMode(_pos2Pin, INPUT);
 
+    _voltagePos1 = analogRead(_pos1Pin);
+    _voltagePos2 = analogRead(_pos2Pin);
+
     regulator.setMode(ON_ERROR);
   }
 
   uint8_t position() {
-    _voltagePos1 = analogRead(_pos1Pin);
-    _voltagePos2 = analogRead(_pos2Pin);
+    uint16_t _rawVoltagePos1 = analogRead(_pos1Pin);
+    uint16_t _rawVoltagePos2 = analogRead(_pos2Pin);
+
+    _voltagePos1 += (_rawVoltagePos1 - _voltagePos1) * 0.3;
+    _voltagePos2 += (_rawVoltagePos2 - _voltagePos2) * 0.3;
 
     if (_voltagePos1 < minVoltageSens1 + delta) {
       _pos1 = 0;
@@ -28,7 +34,6 @@ public:
       _pos1 = (uint32_t)(_voltagePos1 - minVoltageSens1) * 100 /
               (maxVoltageSens1 - minVoltageSens1);
     }
-
 
     return _pos1;
   }
@@ -42,80 +47,6 @@ public:
   uint8_t holdPosition() { return regulator.setpoint; }
   bool holdReached() { return _holdReached; }
   uint8_t holdDirection() { return uint8_t(_holdDirection); }
-
-  void check() {
-    _motor.Enable();
-
-    regulator.input = position();
-
-    setRegulator(100, OPEN);
-    regulator.setDt(controlTimeout);
-
-    unsigned long start = millis();
-
-    while (position() < 100) {
-      int val = regulator.getResultTimer();
-      open(val);
-
-      if (!sensorsStartupOk()) {
-        _fail(Errors::ERR_THR_CHECK_1);
-        return;
-      }
-
-      if (timeout(start, _operationLimit)) {
-        _fail(Errors::ERR_THR_CHECK_2);
-        return;
-      }
-    }
-
-    _motor.Stop();
-    delay(1000);
-
-    setRegulator(70, CLOSE);
-    regulator.setDt(controlTimeout);
-
-    start = millis();
-
-    while (position() >= 70) {
-      int val = regulator.getResultTimer();
-      close(val);
-
-      if (!sensorsStartupOk()) {
-        _fail(Errors::ERR_THR_CHECK_3);
-        return;
-      }
-
-      if (timeout(start, _operationLimit)) {
-        _fail(Errors::ERR_THR_CHECK_4);
-        return;
-      }
-    }
-
-    _motor.Stop();
-    delay(1000);
-
-    setRegulator(100, OPEN);
-    regulator.setDt(controlTimeout);
-
-    start = millis();
-
-    while (position() < 100) {
-      int val = regulator.getResultTimer();
-      open(val);
-
-      if (!sensorsStartupOk()) {
-        _fail(Errors::ERR_THR_CHECK_5);
-        return;
-      }
-
-      if (timeout(start, _operationLimit)) {
-        _fail(Errors::ERR_THR_CHECK_6);
-        return;
-      }
-    }
-
-    _motor.Disable();
-  }
 
   bool control() {
     if (_failed) {
@@ -263,15 +194,25 @@ public:
     _motor.Enable();
 
     _motor.TurnLeft(speedMinClose);
+
+    delay(5);
+
+    _motor.Stop();
+
+    delay(5);
   }
 
   void calibrateOpen() {
     _motor.Enable();
 
     _motor.TurnRight(speedMinOpen);
-  }
 
-  void calibrateStop() { _motor.Stop(); }
+    delay(5);
+
+    _motor.Stop();
+
+    delay(5);
+  }
 
 private:
   // Call only after position() call
@@ -280,18 +221,6 @@ private:
     // position()
     if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) >
         sensorsOkVoltageDelta) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // Call only after position() call
-  bool sensorsStartupOk() {
-    // Use stored voltage values - assume that sensorsStartupOk called only
-    // after position()
-    if (abs((int16_t)1024 - (int16_t)(_voltagePos1 + _voltagePos2)) >
-        sensorsStartupOkVoltageDelta) {
       return false;
     }
 
@@ -440,20 +369,19 @@ private:
 
   const uint8_t _pos1Pin, _pos2Pin;
 
-  uint16_t _voltagePos1, _voltagePos2;
+  float _voltagePos1, _voltagePos2;
   uint8_t _pos1;
 
   // Use delta to guarantee get 100% open and 0% close
   const uint8_t delta = 5;
 
   // Max voltage as native integer data
-  uint16_t minVoltageSens1 = 160;
-  uint16_t maxVoltageSens1 = 890;
-  uint16_t minVoltageSens2 = 120;
-  uint16_t maxVoltageSens2 = 840;
+  uint16_t minVoltageSens1 = 115;
+  uint16_t maxVoltageSens1 = 942;
+  uint16_t minVoltageSens2 = 82;
+  uint16_t maxVoltageSens2 = 922;
 
-  const uint8_t sensorsStartupOkVoltageDelta = 50;
-  const uint8_t sensorsOkVoltageDelta = 30;
+  const uint8_t sensorsOkVoltageDelta = 15;
 
   BTS7960 _motor;
 

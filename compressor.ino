@@ -26,7 +26,7 @@ const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
 const bool LOG_PRESSURE = true;
-const bool LOG_SENSOR_RAW = false;
+const bool LOG_SENSOR_RAW = true;
 const bool LOG_POSITION = true;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
@@ -74,13 +74,15 @@ PowerOffNotify powerOffNotify;
 // Pressure - is value in kpa
 //
 // nativeVoltage = voltage * 1024 / 5
+// 756mm 221
 const float sensor1MapDelta = 33.29;
 const float sensor1MapAngle = 0.394;
 
 // Map sensor 2 is differ from map1
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-const float sensor2MapDelta = 33.29;
-const float sensor2MapAngle = 0.394;
+// 756mm 339
+const float sensor2MapDelta = -18.66;
+const float sensor2MapAngle = 0.324;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapDelta, sensor1MapAngle);
@@ -135,22 +137,6 @@ ConsumptionControl consumption(COMPRESSOR_CONSUMPTION_VIRTUAL_PIN, 100,
 
 void setup() {
   Serial.begin(115200);
-
-  if (!USE_CALIBRATE) {
-    tControlPump.control(PUMP_ON_TEMPERATURE);
-    delay(1000);
-    tControlPump.control(PUMP_OFF_TEMPERATURE);
-
-    tControlCooler.control(COOLER_ON_TEMPERATURE);
-    delay(1000);
-    tControlCooler.control(COOLER_OFF_TEMPERATURE);
-
-    compressor.poweron();
-    delay(1000);
-    compressor.poweroff();
-
-    thr.check();
-  }
 }
 
 void loop() {
@@ -164,25 +150,32 @@ void loop() {
 void loopCalibrate() {
   Serial.println("Test pump");
 
-  Serial.print("sens1 temperature:");
-  Serial.println(sens1.temperature());
-  Serial.print("sens1 voltage temp:");
-  Serial.println(sens1.voltageTemp());
+  unsigned long started = millis();
 
   tControlPump.control(PUMP_ON_TEMPERATURE);
-  delay(5000);
-  tControlPump.poweroff();
 
-  Serial.print("sens1 temperature:");
-  Serial.println(sens1.temperature());
-  Serial.print("sens1 voltage temp:");
-  Serial.println(sens1.voltageTemp());
+  while (!timeout(started, 5000)) {
+    Serial.print(">sens1 temperature:");
+    Serial.println(sens1.temperature());
+
+    delay(10);
+  }
 
   Serial.println("Test cooler");
 
+  started = millis();
+
   tControlCooler.control(COOLER_ON_TEMPERATURE);
-  delay(1000);
-  tControlCooler.control(COOLER_OFF_TEMPERATURE);
+
+  while (!timeout(started, 5000)) {
+    Serial.print(">sens1 temperature:");
+    Serial.println(sens1.temperature());
+
+    delay(10);
+  }
+
+  tControlPump.poweroff();
+  tControlCooler.poweroff();
 
   Serial.println("Test compressor");
 
@@ -209,15 +202,6 @@ void loopCalibrate() {
     delay(1000);
   }
 
-  Serial.println("Test poweroff led");
-
-  for (uint8_t i = 0; i < 5; i++) {
-    powerOffNotify.poweroff();
-    delay(500);
-    powerOffNotify.poweron();
-    delay(500);
-  }
-
   Serial.println("Test sensors");
 
   Serial.print("sens1 temperature:");
@@ -241,106 +225,87 @@ void loopCalibrate() {
 
   Serial.println("Throttle calibrate close");
 
-  Serial.print("throttle 1 voltage:");
-  Serial.println(thr.voltagePosition1());
+  // need to read position to fill voltages
+  thr.position();
 
-  Serial.print("throttle 2 voltage:");
-  Serial.println(thr.voltagePosition2());
+  uint16_t maxPos1 = thr.voltagePosition1(), maxPos2 = thr.voltagePosition2(),
+           minPos1 = thr.voltagePosition1(), minPos2 = thr.voltagePosition2();
 
-  Serial.print("throttle voltage sum:");
-  Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
+  started = millis();
 
-  thr.calibrateClose();
+  while (!timeout(started, 10000)) {
+    // need to read position to fill voltages
+    thr.position();
 
-  for (uint8_t i = 0; i < 10; i++) {
-    Serial.print("throttle 1 voltage:");
+    if (thr.voltagePosition1() > maxPos1) {
+      maxPos1 = thr.voltagePosition1();
+    }
+    if (thr.voltagePosition2() > maxPos2) {
+      maxPos2 = thr.voltagePosition2();
+    }
+    if (thr.voltagePosition1() < minPos1) {
+      minPos1 = thr.voltagePosition1();
+    }
+    if (thr.voltagePosition2() < minPos2) {
+      minPos2 = thr.voltagePosition2();
+    }
+
+    thr.calibrateClose();
+
+    Serial.print(">throttle 1 voltage:");
     Serial.println(thr.voltagePosition1());
 
-    Serial.print("throttle 2 voltage:");
+    Serial.print(">throttle 2 voltage:");
     Serial.println(thr.voltagePosition2());
 
-    Serial.print("throttle voltage sum:");
+    Serial.print(">throttle voltage sum:");
     Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
-
-    delay(100);
   }
 
   Serial.println("Throttle calibrate open");
 
-  Serial.print("throttle 1 voltage:");
-  Serial.println(thr.voltagePosition1());
+  started = millis();
 
-  Serial.print("throttle 2 voltage:");
-  Serial.println(thr.voltagePosition2());
+  while (!timeout(started, 14000)) {
+    // need to read position to fill voltages
+    thr.position();
 
-  thr.calibrateOpen();
+    if (thr.voltagePosition1() > maxPos1) {
+      maxPos1 = thr.voltagePosition1();
+    }
+    if (thr.voltagePosition2() > maxPos2) {
+      maxPos2 = thr.voltagePosition2();
+    }
+    if (thr.voltagePosition1() < minPos1) {
+      minPos1 = thr.voltagePosition1();
+    }
+    if (thr.voltagePosition2() < minPos2) {
+      minPos2 = thr.voltagePosition2();
+    }
 
-  for (uint8_t i = 0; i < 10; i++) {
-    Serial.print("throttle 1 voltage:");
+    thr.calibrateOpen();
+
+    Serial.print(">throttle 1 voltage:");
     Serial.println(thr.voltagePosition1());
 
-    Serial.print("throttle 2 voltage:");
+    Serial.print(">throttle 2 voltage:");
     Serial.println(thr.voltagePosition2());
 
-    Serial.print("throttle voltage sum:");
+    Serial.print(">throttle voltage sum:");
     Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
-
-    delay(100);
   }
 
-  thr.calibrateStop();
+  Serial.print("Min voltage 1 ");
+  Serial.println(minPos1);
+  Serial.print("Max voltage 1 ");
+  Serial.println(maxPos1);
+  Serial.print("Min voltage 2 ");
+  Serial.println(minPos2);
+  Serial.print("Max voltage 2 ");
+  Serial.println(maxPos2);
 
-  Serial.println("Throttle calibrate hold");
-
-  unsigned long _started = millis();
-
-  for (;;) {
-    thr.hold(clbr.position());
-
-    if (!thr.control()) {
-      Serial.print("throttle error:");
-      Serial.println(thr.failStateCode());
-      break;
-    }
-
-    if (logMain.tick()) {
-      Serial.print("throttle position:");
-      Serial.println(thr.position());
-
-      Serial.print("throttle 1 voltage:");
-      Serial.println(thr.voltagePosition1());
-
-      Serial.print("throttle 2 voltage:");
-      Serial.println(thr.voltagePosition2());
-
-      Serial.print("throttle voltage sum:");
-      Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
-
-      Serial.print("throttle status:");
-      Serial.println(thr.status());
-
-      Serial.print("throttle speed:");
-      Serial.println(thr.speed());
-
-      Serial.print("throttle hold status:");
-      Serial.println(thr.holdStatus());
-
-      Serial.print("throttle hold position:");
-      Serial.println(thr.holdPosition());
-
-      Serial.print("throttle hold reached:");
-      Serial.println(thr.holdReached());
-
-      Serial.print("throttle hold direction:");
-      Serial.println(thr.holdDirection());
-    }
-
-    if (millis() - _started > 5000) {
-      break;
-    }
+  while (true) {
   }
-
-  delay(60000);
 }
 
 void loopNormal() {
@@ -546,3 +511,11 @@ void log() {
 }
 
 uint16_t muxRead(uint8_t pin) { return mux.read(pin); }
+
+bool timeout(unsigned long start, uint16_t operationLimit) {
+  if (millis() - start < operationLimit) {
+    return false;
+  }
+
+  return true;
+}
