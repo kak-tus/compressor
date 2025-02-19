@@ -13,15 +13,17 @@ public:
     pinMode(_pos1Pin, INPUT);
     pinMode(_pos2Pin, INPUT);
 
-    _voltagePos1 = analogRead(_pos1Pin);
-    _voltagePos2 = analogRead(_pos2Pin);
-
     regulator.setMode(ON_ERROR);
   }
 
   uint8_t position() {
     uint16_t _rawVoltagePos1 = analogRead(_pos1Pin);
     uint16_t _rawVoltagePos2 = analogRead(_pos2Pin);
+
+    if (_voltagePos1 == 0) {
+      _voltagePos1 = _rawVoltagePos1;
+      _voltagePos2 = _rawVoltagePos2;
+    }
 
     _voltagePos1 += (_rawVoltagePos1 - _voltagePos1) * 0.3;
     _voltagePos2 += (_rawVoltagePos2 - _voltagePos2) * 0.3;

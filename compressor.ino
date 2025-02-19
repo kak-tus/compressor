@@ -74,13 +74,17 @@ PowerOffNotify powerOffNotify;
 // Pressure - is value in kpa
 //
 // nativeVoltage = voltage * 1024 / 5
-// 756mm 221
+// mm to kpa mm*0.1333224
+//
+// 762.7mm 101kpa 223
+// 756mm 100kpa 221
 const float sensor1MapDelta = 33.29;
 const float sensor1MapAngle = 0.394;
 
 // Map sensor 2 is differ from map1
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-// 756mm 339
+// 762.7mm 101kpa 331
+// 756mm 100kpa 339
 const float sensor2MapDelta = -18.66;
 const float sensor2MapAngle = 0.324;
 
