@@ -76,7 +76,13 @@ public:
   uint16_t pressure() {
     _voltageMap = analogRead(_mapPin);
 
-    _pressure = (_voltageMap + _deltaMAP) * _angleMAP;
+    float raw = ((float)_voltageMap + _deltaMAP) * _angleMAP;
+
+    if (raw < 0) {
+      _pressure = 0;
+    } else {
+      _pressure = raw;
+    }
 
     return _pressure;
   }
