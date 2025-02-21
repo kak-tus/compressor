@@ -26,7 +26,7 @@ const uint8_t THROTTLE_POSITION2_PIN = A2;
 
 const bool LOG_TEMPERATURE = false;
 const bool LOG_PRESSURE = true;
-const bool LOG_SENSOR_RAW = true;
+const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
@@ -75,18 +75,20 @@ PowerOffNotify powerOffNotify;
 //
 // nativeVoltage = voltage * 1024 / 5
 // mm to kpa mm*0.1333224
-//
-// 762.7mm 101kpa 223
-// 756mm 100kpa 221
-const float sensor1MapDelta = 33.29;
-const float sensor1MapAngle = 0.394;
+// 100.5408578 225
+// 42.70882656 65
+const float sensor1MapDelta = 53.15964446;
+const float sensor1MapAngle = 0.3614501953;
 
 // Map sensor 2 is differ from map1
+// From customer:
+// Delta -0.098
+// Angle 65.8
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-// 762.7mm 101kpa 331
-// 756mm 100kpa 339
-const float sensor2MapDelta = -18.66;
-const float sensor2MapAngle = 0.324;
+// 100.5408578 333
+// 42.70882656 153
+const float sensor2MapDelta = -20.07039998;
+const float sensor2MapAngle = 0.3212890624;
 
 // Sensor 1 - in sensor, before throttle
 Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapDelta, sensor1MapAngle);
