@@ -215,14 +215,14 @@ void loopCalibrate() {
   Serial.print("sens1 voltage temp:");
   Serial.println(sens1.voltageTemp());
 
-  Serial.print("sens1 pressure (pa):");
+  Serial.print("sens1 pressure (kpa):");
   Serial.println(sens1.pressure());
   Serial.print("sens1 pressure (mm):");
   Serial.println(sens1.pressureInMM());
   Serial.print("sens1 voltage map:");
   Serial.println(sens1.voltageMap());
 
-  Serial.print("sens2 pressure (pa):");
+  Serial.print("sens2 pressure (kpa):");
   Serial.println(sens2.pressure());
   Serial.print("sens2 pressure (mm):");
   Serial.println(sens2.pressureInMM());
@@ -402,16 +402,16 @@ void log() {
 
   if (LOG_PRESSURE && logPressure.tick()) {
     if (USE_EMULATOR) {
-      Serial.print(">sens1 emulated pressure (pa):");
+      Serial.print(">sens1 emulated pressure (kpa):");
       Serial.println(emul1.pressure());
 
-      Serial.print(">sens2 emulated pressure (pa):");
+      Serial.print(">sens2 emulated pressure (kpa):");
       Serial.println(emul2.pressure());
     } else {
-      Serial.print(">sens1 pressure (pa):");
+      Serial.print(">sens1 pressure (kpa):");
       Serial.println(sens1.pressure());
 
-      Serial.print(">sens2 pressure (pa):");
+      Serial.print(">sens2 pressure (kpa):");
       Serial.println(sens2.pressure());
     }
   }
