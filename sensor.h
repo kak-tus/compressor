@@ -8,7 +8,9 @@ public:
   }
 
   int16_t temperature() {
-    _voltageTemp = analogRead(_tempPin);
+    uint16_t rawVoltage = analogRead(_tempPin);
+
+    _voltageTemp += ((float)rawVoltage - _voltageTemp) * 0.5;
 
     int16_t voltageFrom, voltageDiff, tempFrom, tempDiff;
 
@@ -65,18 +67,18 @@ public:
       tempDiff = 130 - tempFrom;
     }
 
-    int16_t rawTemp = tempFrom + (int32_t)(voltageFrom - _voltageTemp) *
+    int16_t _temp = tempFrom + (int32_t)(voltageFrom - _voltageTemp) *
                                      tempDiff / voltageDiff;
 
-    _temp += (rawTemp - _temp) * 0.5;
-
-    return int16_t(_temp);
+    return _temp;
   }
 
   uint16_t pressure() {
-    _voltageMap = analogRead(_mapPin);
+    uint16_t rawVoltage = analogRead(_mapPin);
 
-    float raw = ((float)_voltageMap + _deltaMAP) * _angleMAP;
+    _voltageMap += ((float)rawVoltage - _voltageMap) * 0.5;
+
+    float raw = (_voltageMap + _deltaMAP) * _angleMAP;
 
     if (raw < 0) {
       _pressure = 0;
@@ -100,8 +102,7 @@ private:
   const uint8_t _tempPin;
   const uint8_t _mapPin;
 
-  float _temp;
   uint16_t _pressure;
 
-  uint16_t _voltageMap, _voltageTemp;
+  float _voltageMap, _voltageTemp;
 };
