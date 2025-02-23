@@ -146,15 +146,17 @@ private:
     _previousPressure2 = pressure2;
   }
 
-  const uint16_t closedPressure2 = 40;
+  const uint16_t closedPressure2 = 38;
   const uint16_t limitPressure2 = 170;
-  const uint16_t pressureDelta = 2;
-  const uint16_t pressureIdleDelta = 4;
-  const uint16_t blowoffDelta = 10;
+  const uint16_t pressureDelta = 5;
+  const uint16_t pressureIdleDelta = 10;
+  const uint16_t blowoffDelta = 20;
 
   const uint8_t closeDelay = 10;
   const uint8_t openDelay = 5;
 
+  // 60-70 - is ok temperature
+  // 80 - is bad, stop boost
   const int16_t boostOffTemperature = 80;
   const int16_t boostLowerTemperature = 75;
 
