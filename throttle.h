@@ -50,22 +50,20 @@ public:
   bool holdReached() { return _holdReached; }
   uint8_t holdDirection() { return uint8_t(_holdDirection); }
 
-  bool control() {
-    if (_failed) {
-      return false;
-    }
-
+  void control() {
     if (!timeout(_controlTime, controlTimeout)) {
-      return true;
+      return;
     }
 
     _controlTime = millis();
 
     switch (_holdStatus) {
     case IN_HOLD:
-      return controlHold();
+      controlHold();
+      return;
     case IN_POWEROFF:
-      return controlPoweroff();
+      controlPoweroff();
+      return;
     default:
       if (timeout(_openedChecked, openedCheckedTimeout)) {
         // Periodically check that throttle wasn't uncontrolled open
@@ -73,21 +71,14 @@ public:
 
         uint8_t _currPos = position();
 
-        if (!sensorsOk()) {
-          _fail(Errors::ERR_THR_SENSORS_1);
-          return false;
-        }
-
         if (_currPos < 100) {
           poweroff();
         }
       }
 
-      return true;
+      return;
     }
   }
-
-  uint8_t failStateCode() { return _failStateCode; }
 
   void hold(uint8_t pos) {
     if (_failed) {
@@ -99,11 +90,6 @@ public:
       _motor.Enable();
 
       uint8_t _currPos = position();
-
-      if (!sensorsOk()) {
-        _fail(Errors::ERR_THR_SENSORS_2);
-        return;
-      }
 
       if (_currPos < pos) {
         _holdDirection = OPEN;
@@ -126,11 +112,6 @@ public:
     }
 
     uint8_t _currPos = position();
-
-    if (!sensorsOk()) {
-      _fail(Errors::ERR_THR_SENSORS_3);
-      return;
-    }
 
     if (pos == _currPos) {
       _holdReached = true;
@@ -216,7 +197,6 @@ public:
     delay(5);
   }
 
-private:
   // Call only after position() call
   bool sensorsOk() {
     // Use stored voltage values - assume that sensorsOk called only after
@@ -229,24 +209,8 @@ private:
     return true;
   }
 
-  void _fail(uint8_t code) {
-    Serial.print("Fail data:");
-    Serial.print(" pos1=");
-    Serial.print(_pos1);
-    Serial.print(" voltagePos1=");
-    Serial.print(_voltagePos1);
-    Serial.print(" voltagePos2=");
-    Serial.print(_voltagePos2);
-    Serial.println("");
 
-    _failed = true;
-    _failStateCode = code;
-
-    syncOpen();
-
-    _motor.Disable();
-  }
-
+private:
   void syncOpen() {
     unsigned long start = millis();
 
@@ -308,17 +272,8 @@ private:
     return true;
   }
 
-  bool controlHold() {
-    if (_failed) {
-      return false;
-    }
-
+  void controlHold() {
     uint8_t pos = position();
-
-    if (!sensorsOk()) {
-      _fail(Errors::ERR_THR_SENSORS_4);
-      return false;
-    }
 
     if (_holdReached) {
       // TODO Add possible corrections
@@ -341,21 +296,10 @@ private:
         }
       }
     }
-
-    return true;
   }
 
-  bool controlPoweroff() {
-    if (_failed) {
-      return false;
-    }
-
+  void controlPoweroff() {
     uint8_t pos = position();
-
-    if (!sensorsOk()) {
-      _fail(Errors::ERR_THR_SENSORS_5);
-      return false;
-    }
 
     if (pos < 100) {
       int val = regulator.getResultNow();
@@ -365,8 +309,6 @@ private:
       _holdStatus = holdStatusType(0);
       _holdReached = true;
     }
-
-    return true;
   }
 
   const uint8_t _pos1Pin, _pos2Pin;
@@ -402,8 +344,6 @@ private:
   bool _failed = false;
 
   const uint16_t _operationLimit = 2000;
-
-  uint8_t _failStateCode = 0;
 
   enum holdStatusType { IN_HOLD = 1, IN_POWEROFF };
   holdStatusType _holdStatus;

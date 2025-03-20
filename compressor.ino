@@ -61,6 +61,10 @@ TimerMs logIdle(500, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs consumptionCheck(500, true, false);
+TimerMs sensorsCheck(500, true, false);
+
+unsigned long consumptionCheckLogged;
+unsigned long sensorsCheckLogged;
 
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
@@ -114,7 +118,6 @@ TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
 
 Errors err(BEEP_PIN);
 
-bool failed = false;
 bool poweredoff = true;
 
 Controller cntrl;
@@ -141,9 +144,7 @@ const uint8_t COMPRESSOR_CONSUMPTION_VIRTUAL_PIN = 2;
 ConsumptionControl consumption(COMPRESSOR_CONSUMPTION_VIRTUAL_PIN, 100,
                                &muxRead);
 
-void setup() {
-  Serial.begin(115200);
-}
+void setup() { Serial.begin(115200); }
 
 void loop() {
   if (USE_CALIBRATE) {
@@ -315,7 +316,7 @@ void loopCalibrate() {
 }
 
 void loopNormal() {
-  if (!failed && !poweredoff) {
+  if (!poweredoff) {
     if (USE_EMULATOR) {
       emul1.setRealThrottle(thr.position());
       emul2.setRealThrottle(thr.position());
@@ -326,21 +327,7 @@ void loopNormal() {
     }
   }
 
-  if (!thr.control()) {
-    if (!failed) {
-      Serial.print("Fail state code: ");
-      Serial.println(thr.failStateCode());
-
-      failed = true;
-
-      tControlPump.poweroff();
-      tControlCooler.poweroff();
-
-      compressor.poweroff();
-
-      err.error(thr.failStateCode());
-    }
-  }
+  thr.control();
 
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {
@@ -354,7 +341,7 @@ void loopNormal() {
 
       tControlPump.poweroff();
       tControlCooler.poweroff();
-    } else if (!failed && !powerOff.need() && poweredoff) {
+    } else if (!powerOff.need() && poweredoff) {
       Serial.println("Power on");
 
       poweredoff = false;
@@ -368,7 +355,7 @@ void loopNormal() {
     log();
   }
 
-  if (heatCheck.tick() && !failed && !poweredoff) {
+  if (heatCheck.tick() && !poweredoff) {
     int16_t temp = sens1.temperature();
 
     tControlPump.control(temp);
@@ -377,19 +364,27 @@ void loopNormal() {
     cntrl.setTemperature(temp);
   }
 
-  if (consumptionCheck.tick() && !failed && !poweredoff) {
-    if (consumption.failed()) {
+  if (consumptionCheck.tick() && !poweredoff) {
+    if (consumption.failed() && timeout(consumptionCheckLogged, 5000)) {
+      consumptionCheckLogged = millis();
+
       Serial.print("Failed compressor: no consumption, current=");
       Serial.println(consumption.consumption());
 
-      failed = true;
-
-      tControlPump.poweroff();
-      tControlCooler.poweroff();
-
-      compressor.poweroff();
-
       err.error(Errors::ERR_COMPRESSOR_CONSUMPTION);
+    }
+  }
+
+  if (sensorsCheck.tick() && !poweredoff) {
+    if (!thr.sensorsOk() && timeout(sensorsCheckLogged, 5000)) {
+      sensorsCheckLogged = millis();
+
+      Serial.print("Failed throttle: no sensors ok, voltage1=");
+      Serial.print(thr.voltagePosition1());
+      Serial.print(", voltage2=");
+      Serial.println(thr.voltagePosition2());
+
+      err.error(Errors::ERR_THR_SENSORS);
     }
   }
 }

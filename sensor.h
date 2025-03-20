@@ -68,7 +68,7 @@ public:
     }
 
     int16_t _temp = tempFrom + (int32_t)(voltageFrom - _voltageTemp) *
-                                     tempDiff / voltageDiff;
+                                   tempDiff / voltageDiff;
 
     return _temp;
   }
