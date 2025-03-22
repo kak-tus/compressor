@@ -53,11 +53,11 @@ const uint8_t L_PWM_PIN = 5;
 const uint8_t BEEP_PIN = 10;
 
 TimerMs poweroffCheck(100, true, false);
-TimerMs logMain(1000, true, false);
+TimerMs logMain(100, true, false);
 TimerMs logTemp(1000, true, false);
 TimerMs logPressure(100, true, false);
 TimerMs logPosition(100, true, false);
-TimerMs logIdle(500, true, false);
+TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs consumptionCheck(500, true, false);
@@ -328,6 +328,7 @@ void loopNormal() {
   }
 
   thr.control();
+  cntrl.control(sens1.pressure(), sens2.pressure());
 
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {

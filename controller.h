@@ -9,9 +9,11 @@ public:
     _position = 100;
   }
 
-  uint8_t position(uint16_t pressure1, uint16_t pressure2) {
+  void control(uint16_t pressure1, uint16_t pressure2) {
     setPreviousPressure(pressure1, pressure2);
+  }
 
+  uint8_t position(uint16_t pressure1, uint16_t pressure2) {
     if (isBlowoff(pressure1)) {
       if (timeout(_logBlowoff, 1000)) {
         _logBlowoff = millis();
@@ -62,18 +64,18 @@ public:
   uint8_t positionVal() { return _position; }
 
   bool isEngineIdle(uint16_t pressure2) {
-    if (pressure2 < closedPressure2 - pressureIdleDelta) {
+    if (pressure2 < closedPressure2Min) {
       _idleSwitchedOffAt = millis();
       return false;
-    } else if (pressure2 > closedPressure2 + pressureIdleDelta) {
+    } else if (pressure2 > closedPressure2Max) {
       _idleSwitchedOffAt = millis();
       return false;
     }
 
-    if (_previousPressure2 < closedPressure2 - pressureIdleDelta) {
+    if (_previousPressure2 < closedPressure2Min) {
       _idleSwitchedOffAt = millis();
       return false;
-    } else if (_previousPressure2 > closedPressure2 + pressureIdleDelta) {
+    } else if (_previousPressure2 > closedPressure2Max) {
       _idleSwitchedOffAt = millis();
       return false;
     }
@@ -132,24 +134,28 @@ private:
 
   void setPosition(uint8_t position) {
     _positionChanged = millis();
-    _position = 100;
+    _position = position;
   }
 
   void setPreviousPressure(uint16_t pressure1, uint16_t pressure2) {
-    if (!timeout(_previousPressureChanged, 100)) {
+    if (!timeout(_previousPressureChanged, 50)) {
       return;
     }
 
     _previousPressureChanged = millis();
 
-    _previousPressure1 = pressure1;
-    _previousPressure2 = pressure2;
+    _previousPressure1 = _previousPressure1_0;
+    _previousPressure2 = _previousPressure2_0;
+
+    _previousPressure1_0 = pressure1;
+    _previousPressure2_0 = pressure2;
   }
 
-  const uint16_t closedPressure2 = 38;
+  const uint16_t closedPressure2Min = 30;
+  const uint16_t closedPressure2Max = 44;
+
   const uint16_t limitPressure2 = 170;
   const uint16_t pressureDelta = 5;
-  const uint16_t pressureIdleDelta = 10;
   const uint16_t blowoffDelta = 20;
 
   const uint8_t closeDelay = 10;
@@ -163,9 +169,10 @@ private:
   uint8_t _position, _minPercent;
   unsigned long _positionChanged, _minPercentChanged, _logLimit, _logBlowoff;
 
-  uint16_t _previousPressure1, _previousPressure2;
+  uint16_t _previousPressure1, _previousPressure2, _previousPressure1_0,
+      _previousPressure2_0;
   unsigned long _previousPressureChanged;
 
   unsigned long _idleSwitchedOffAt;
-  const uint16_t idleSwitchOnTimeout = 500;
+  const uint16_t idleSwitchOnTimeout = 1000;
 };
