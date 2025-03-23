@@ -316,19 +316,22 @@ void loopCalibrate() {
 }
 
 void loopNormal() {
+  uint16_t pressure1 = sens1.pressure();
+  uint16_t pressure2 = sens2.pressure();
+
   if (!poweredoff) {
     if (USE_EMULATOR) {
       emul1.setRealThrottle(thr.position());
       emul2.setRealThrottle(thr.position());
 
-      thr.hold(cntrl.position(emul1.pressure(), emul2.pressure()));
+      thr.hold(cntrl.position(emul1.pressure(), emul2.pressure(), poweredoff));
     } else {
-      thr.hold(cntrl.position(sens1.pressure(), sens2.pressure()));
+      thr.hold(cntrl.position(pressure1, pressure2, poweredoff));
     }
   }
 
   thr.control();
-  cntrl.control(sens1.pressure(), sens2.pressure());
+  cntrl.control(pressure1, pressure2, poweredoff);
 
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {
@@ -420,10 +423,10 @@ void log() {
   if (LOG_IDLE && logIdle.tick()) {
     if (USE_EMULATOR) {
       Serial.print(">controller engine idle:");
-      Serial.println(cntrl.isEngineIdle(emul2.pressure()));
+      Serial.println(cntrl.isEngineIdle());
     } else {
       Serial.print(">controller engine idle:");
-      Serial.println(cntrl.isEngineIdle(sens2.pressure()));
+      Serial.println(cntrl.isEngineIdle());
     }
   }
 

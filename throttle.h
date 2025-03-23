@@ -325,7 +325,7 @@ private:
   uint16_t minVoltageSens2 = 82;
   uint16_t maxVoltageSens2 = 922;
 
-  const uint8_t sensorsOkVoltageDelta = 15;
+  const uint8_t sensorsOkVoltageDelta = 16;
 
   BTS7960 _motor;
 
