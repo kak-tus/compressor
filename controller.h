@@ -11,7 +11,7 @@ public:
 
   void control(uint16_t pressure1, uint16_t pressure2, bool poweredoff) {
     setPreviousPressure(pressure1, pressure2);
-    chechEngineIdle(pressure1, pressure2, poweredoff);
+    checkEngineIdle(pressure1, pressure2, poweredoff);
   }
 
   uint8_t position(uint16_t pressure1, uint16_t pressure2, bool poweredoff) {
@@ -76,7 +76,71 @@ public:
     }
   }
 
-  void chechEngineIdle(uint16_t pressure1, uint16_t pressure2,
+  bool isBlowoff(uint16_t pressure1) {
+    if (pressure1 > _previousPressure1 + blowoffDelta) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+private:
+  bool timeout(unsigned long start, uint16_t operationLimit) {
+    if (millis() - start < operationLimit) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void incPosition() {
+    if (!timeout(_positionChanged, openDelay)) {
+      return;
+    }
+
+    _positionChanged = millis();
+
+    if (_position >= 100) {
+      return;
+    }
+
+    _position++;
+  }
+
+  void decPosition() {
+    if (!timeout(_positionChanged, closeDelay)) {
+      return;
+    }
+
+    _positionChanged = millis();
+
+    if (_position == 0) {
+      return;
+    }
+
+    _position--;
+  }
+
+  void setPosition(uint8_t position) {
+    _positionChanged = millis();
+    _position = position;
+  }
+
+  void setPreviousPressure(uint16_t pressure1, uint16_t pressure2) {
+    if (!timeout(_previousPressureChanged, 50)) {
+      return;
+    }
+
+    _previousPressureChanged = millis();
+
+    _previousPressure1 = _previousPressure1_0;
+    _previousPressure2 = _previousPressure2_0;
+
+    _previousPressure1_0 = pressure1;
+    _previousPressure2_0 = pressure2;
+  }
+
+  void checkEngineIdle(uint16_t pressure1, uint16_t pressure2,
                        bool poweredoff) {
     if (!poweredoff && _debugMinMax) {
       bool log;
@@ -143,70 +207,6 @@ public:
     }
 
     _idle = idleNow;
-  }
-
-  bool isBlowoff(uint16_t pressure1) {
-    if (pressure1 > _previousPressure1 + blowoffDelta) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-private:
-  bool timeout(unsigned long start, uint16_t operationLimit) {
-    if (millis() - start < operationLimit) {
-      return false;
-    }
-
-    return true;
-  }
-
-  void incPosition() {
-    if (!timeout(_positionChanged, openDelay)) {
-      return;
-    }
-
-    _positionChanged = millis();
-
-    if (_position >= 100) {
-      return;
-    }
-
-    _position++;
-  }
-
-  void decPosition() {
-    if (!timeout(_positionChanged, closeDelay)) {
-      return;
-    }
-
-    _positionChanged = millis();
-
-    if (_position == 0) {
-      return;
-    }
-
-    _position--;
-  }
-
-  void setPosition(uint8_t position) {
-    _positionChanged = millis();
-    _position = position;
-  }
-
-  void setPreviousPressure(uint16_t pressure1, uint16_t pressure2) {
-    if (!timeout(_previousPressureChanged, 50)) {
-      return;
-    }
-
-    _previousPressureChanged = millis();
-
-    _previousPressure1 = _previousPressure1_0;
-    _previousPressure2 = _previousPressure2_0;
-
-    _previousPressure1_0 = pressure1;
-    _previousPressure2_0 = pressure2;
   }
 
   const uint16_t closedPressure2MinPoweredOff = 26;
