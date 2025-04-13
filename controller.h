@@ -7,36 +7,43 @@ public:
     // this controller control how MUST be percent set, but not real percent
     // Real and wanted percents controlled by throttle
     _position = 100;
+    _idle = true;
+    _idleDetectedAt = 0;
+  }
+
+  void poweroff() {
+    _position = 100;
+    _idle = true;
+    _idleDetectedAt = 0;
+  }
+
+  void poweron() {
+    _position = 100;
+    _idle = true;
+    _idleDetectedAt = 0;
   }
 
   void control(uint16_t pressure1, uint16_t pressure2, bool poweredoff) {
-    setPreviousPressure(pressure1, pressure2);
     checkEngineIdle(pressure1, pressure2, poweredoff);
+    checkEngineAccelerate(pressure2);
+
+    setPreviousPressure(pressure1, pressure2);
   }
 
   uint8_t position(uint16_t pressure1, uint16_t pressure2, bool poweredoff) {
-    if (isBlowoff(pressure1)) {
-      if (timeout(_logBlowoff, 1000)) {
-        _logBlowoff = millis();
-
-        Serial.print("Blowoff: from ");
-        Serial.print(_previousPressure1);
-        Serial.print(" to ");
-        Serial.println(pressure1);
-      }
-
-      setPosition(100);
-    } else if (pressure2 > limitPressure2 + pressureDelta) {
+    if (pressure2 > limitPressure2) {
       if (timeout(_logLimit, 1000)) {
         _logLimit = millis();
 
-        Serial.print("Pressure limit: ");
+        Serial.print("Pressure limit: pressure1=");
+        Serial.print(pressure1);
+        Serial.print(", pressure2=");
         Serial.println(pressure2);
       }
 
       incPosition();
     } else if (isEngineIdle()) {
-      setPosition(100);
+      incPosition();
     } else {
       decPosition();
     }
@@ -71,14 +78,6 @@ public:
       } else {
         return false;
       }
-    } else {
-      return false;
-    }
-  }
-
-  bool isBlowoff(uint16_t pressure1) {
-    if (pressure1 > _previousPressure1 + blowoffDelta) {
-      return true;
     } else {
       return false;
     }
@@ -142,34 +141,6 @@ private:
 
   void checkEngineIdle(uint16_t pressure1, uint16_t pressure2,
                        bool poweredoff) {
-    if (!poweredoff && _debugMinMax) {
-      bool log;
-
-      if (pressure2 < _min) {
-        _min = pressure2;
-        log = true;
-      }
-      if (pressure2 > _max) {
-        _max = pressure2;
-        log = true;
-      }
-      if (_previousPressure2 < _min) {
-        _min = _previousPressure2;
-        log = true;
-      }
-      if (_previousPressure2 > _max) {
-        _max = _previousPressure2;
-        log = true;
-      }
-
-      if (log) {
-        Serial.print("min=");
-        Serial.print(_min);
-        Serial.print(", _max=");
-        Serial.println(_max);
-      }
-    }
-
     uint16_t min, max;
     bool idleNow;
 
@@ -202,6 +173,12 @@ private:
       return;
     }
 
+    // Serial.print("pressure2=");
+    // Serial.print("pressure2=");
+    // Serial.print(pressure2);
+    // Serial.print(" _previousPressure2=");
+    // Serial.println(_previousPressure2);
+
     if (idleNow) {
       _idleDetectedAt = millis();
     }
@@ -209,10 +186,18 @@ private:
     _idle = idleNow;
   }
 
+  void checkEngineAccelerate(uint16_t pressure2) {
+    if (pressure2 > closedPressure2MaxThrottle100 &&
+        pressure2 > _previousPressure2_0 &&
+        _previousPressure2_0 > _previousPressure2) {
+      _idle = false;
+    }
+  }
+
   const uint16_t closedPressure2MinPoweredOff = 26;
   const uint16_t closedPressure2MaxPoweredOff = 50;
 
-  const uint16_t closedPressure2MinThrottle100 = 20;
+  const uint16_t closedPressure2MinThrottle100 = 18;
   const uint16_t closedPressure2MaxThrottle100 = 70;
 
   const uint16_t closedPressure2MinThrottle0 = 16;
@@ -220,12 +205,10 @@ private:
 
   const uint16_t idlePressure1 = 110;
 
-  const uint16_t limitPressure2 = 170;
-  const uint16_t pressureDelta = 5;
-  const uint16_t blowoffDelta = 20;
+  const uint16_t limitPressure2 = 130;
 
-  const uint8_t closeDelay = 5;
-  const uint8_t openDelay = 2;
+  const uint8_t closeDelay = 2;
+  const uint8_t openDelay = 15;
 
   // 60-70 - is ok temperature
   // 80 - is bad, stop boost
@@ -233,7 +216,7 @@ private:
   const int16_t boostLowerTemperature = 75;
 
   uint8_t _position, _minPercent;
-  unsigned long _positionChanged, _minPercentChanged, _logLimit, _logBlowoff,
+  unsigned long _positionChanged, _minPercentChanged, _logLimit,
       _logIdle;
 
   uint16_t _previousPressure1, _previousPressure2, _previousPressure1_0,
@@ -241,9 +224,6 @@ private:
   unsigned long _previousPressureChanged;
 
   unsigned long _idleDetectedAt;
-  const uint16_t idleSwitchOnTimeout = 1000;
+  const uint16_t idleSwitchOnTimeout = 3000;
   bool _idle;
-
-  uint16_t _min = 100, _max = 10;
-  const bool _debugMinMax = false;
 };

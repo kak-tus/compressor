@@ -320,7 +320,7 @@ private:
   const uint8_t delta = 5;
 
   // Max voltage as native integer data
-  uint16_t minVoltageSens1 = 115;
+  uint16_t minVoltageSens1 = 116;
   uint16_t maxVoltageSens1 = 942;
   uint16_t minVoltageSens2 = 82;
   uint16_t maxVoltageSens2 = 922;
@@ -357,7 +357,7 @@ private:
   const uint16_t openedCheckedTimeout = 5000;
 
   unsigned long _controlTime;
-  const uint16_t controlTimeout = 10;
+  const uint16_t controlTimeout = 5;
 
   GyverPID regulator = GyverPID(1, 0.1, 0.1, controlTimeout);
 

@@ -345,6 +345,7 @@ void loopNormal() {
 
       tControlPump.poweroff();
       tControlCooler.poweroff();
+      cntrl.poweroff();
     } else if (!powerOff.need() && poweredoff) {
       Serial.println("Power on");
 
@@ -352,6 +353,7 @@ void loopNormal() {
 
       powerOffNotify.poweron();
       compressor.poweron();
+      cntrl.poweron();
     }
   }
 
