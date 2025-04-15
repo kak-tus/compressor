@@ -17,14 +17,17 @@
 const uint8_t POWEROFF_PIN = 2;
 
 const uint8_t TEMP1_PIN = A4;
-const uint8_t MAP1_PIN = A0;
+
+const uint8_t THROTTLE_PIN = A0;
+const uint16_t THROTTLE_MIN = 90;
+const uint16_t THROTTLE_MAX = 845;
 
 const uint8_t MAP2_PIN = A3;
 
 const uint8_t THROTTLE_POSITION1_PIN = A1;
 const uint8_t THROTTLE_POSITION2_PIN = A2;
 
-const bool LOG_TEMPERATURE = false;
+const bool LOG_TEMPERATURE = true;
 const bool LOG_PRESSURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
@@ -34,7 +37,6 @@ const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_CONSUMPTION = false;
-const bool LOG_IDLE = true;
 const bool LOG_COMPRESSOR_STATUS = false;
 
 const uint8_t PUMP_PIN = 7;
@@ -79,27 +81,27 @@ PowerOffNotify powerOffNotify;
 //
 // nativeVoltage = voltage * 1024 / 5
 // mm to kpa mm*0.1333224
-// 100.5408578 225
-// 42.70882656 65
-const float sensor1MapDelta = 53.15964446;
-const float sensor1MapAngle = 0.3614501953;
-
-// Map sensor 2 is differ from map1
+//
 // From customer:
 // Delta -0.098
 // Angle 65.8
+//
 // Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
+//
 // 100.5408578 333
 // 42.70882656 153
 const float sensor2MapDelta = -20.07039998;
 const float sensor2MapAngle = 0.3212890624;
 
 // Sensor 1 - in sensor, before throttle
-Sensor sens1(TEMP1_PIN, MAP1_PIN, sensor1MapDelta, sensor1MapAngle);
-// Set same temperature pin as in sens1 because temp from sensor 2 is not used
-// by controller, it used by EBU block
+// Only temperature
+Sensor sens1(TEMP1_PIN);
 // Sensor 2 - out sensor, after throttle
-Sensor sens2(TEMP1_PIN, MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
+// Only pressure
+Sensor sens2(MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
+
+// Main throttle (uncontrolled)
+Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
 
 const bool USE_EMULATOR = false;
 
@@ -216,13 +218,6 @@ void loopCalibrate() {
   Serial.print("sens1 voltage temp:");
   Serial.println(sens1.voltageTemp());
 
-  Serial.print("sens1 pressure (kpa):");
-  Serial.println(sens1.pressure());
-  Serial.print("sens1 pressure (mm):");
-  Serial.println(sens1.pressureInMM());
-  Serial.print("sens1 voltage map:");
-  Serial.println(sens1.voltageMap());
-
   Serial.print("sens2 pressure (kpa):");
   Serial.println(sens2.pressure());
   Serial.print("sens2 pressure (mm):");
@@ -316,22 +311,22 @@ void loopCalibrate() {
 }
 
 void loopNormal() {
-  uint16_t pressure1 = sens1.pressure();
   uint16_t pressure2 = sens2.pressure();
+
+  cntrl.control(pressure2, sensThrottle.position());
 
   if (!poweredoff) {
     if (USE_EMULATOR) {
       emul1.setRealThrottle(thr.position());
       emul2.setRealThrottle(thr.position());
 
-      thr.hold(cntrl.position(emul1.pressure(), emul2.pressure(), poweredoff));
+      thr.hold(cntrl.position());
     } else {
-      thr.hold(cntrl.position(pressure1, pressure2, poweredoff));
+      thr.hold(cntrl.position());
     }
   }
 
   thr.control();
-  cntrl.control(pressure1, pressure2, poweredoff);
 
   if (poweroffCheck.tick()) {
     if (powerOff.need() && !poweredoff) {
@@ -403,15 +398,9 @@ void log() {
 
   if (LOG_PRESSURE && logPressure.tick()) {
     if (USE_EMULATOR) {
-      Serial.print(">sens1 emulated pressure (kpa):");
-      Serial.println(emul1.pressure());
-
       Serial.print(">sens2 emulated pressure (kpa):");
       Serial.println(emul2.pressure());
     } else {
-      Serial.print(">sens1 pressure (kpa):");
-      Serial.println(sens1.pressure());
-
       Serial.print(">sens2 pressure (kpa):");
       Serial.println(sens2.pressure());
     }
@@ -420,16 +409,9 @@ void log() {
   if (LOG_POSITION && logPosition.tick()) {
     Serial.print(">throttle position:");
     Serial.println(thr.position());
-  }
 
-  if (LOG_IDLE && logIdle.tick()) {
-    if (USE_EMULATOR) {
-      Serial.print(">controller engine idle:");
-      Serial.println(cntrl.isEngineIdle());
-    } else {
-      Serial.print(">controller engine idle:");
-      Serial.println(cntrl.isEngineIdle());
-    }
+    Serial.print(">main throttle position:");
+    Serial.println(sensThrottle.position());
   }
 
   if (logOther.tick()) {
@@ -439,20 +421,17 @@ void log() {
     }
 
     if (LOG_SENSOR_RAW) {
-      Serial.print(">sens1 pressure (mm):");
-      Serial.println(sens1.pressureInMM());
-
       Serial.print(">sens2 pressure (mm):");
       Serial.println(sens2.pressureInMM());
 
       Serial.print(">sens1 voltage temp:");
       Serial.println(sens1.voltageTemp());
 
-      Serial.print(">sens1 voltage map:");
-      Serial.println(sens1.voltageMap());
-
       Serial.print(">sens2 voltage map:");
       Serial.println(sens2.voltageMap());
+
+      Serial.print(">sens main throttle voltage position:");
+      Serial.println(sensThrottle.voltagePosition());
     }
 
     if (LOG_THROTTLE_RAW) {

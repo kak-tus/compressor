@@ -1,10 +1,35 @@
 class Sensor {
 public:
-  Sensor(uint8_t tempPin, uint8_t mapPin, float deltaMAP, float angleMAP)
-      : _tempPin(tempPin), _mapPin(mapPin), _deltaMAP(deltaMAP),
-        _angleMAP(angleMAP) {
+  Sensor(uint8_t tempPin, uint8_t mapPin, float deltaMAP, float angleMAP) {
+    _tempPin = tempPin;
+    _mapPin = mapPin;
+    _deltaMAP = deltaMAP;
+    _angleMAP = angleMAP;
+
     pinMode(_tempPin, INPUT);
     pinMode(_mapPin, INPUT);
+  }
+
+  Sensor(uint8_t mapPin, float deltaMAP, float angleMAP) {
+    _mapPin = mapPin;
+    _deltaMAP = deltaMAP;
+    _angleMAP = angleMAP;
+
+    pinMode(_mapPin, INPUT);
+  }
+
+  Sensor(uint8_t tempPin) {
+    _tempPin = tempPin;
+
+    pinMode(_tempPin, INPUT);
+  }
+
+  Sensor(uint8_t positionPin, uint16_t min, uint16_t max) {
+    _positionPin = positionPin;
+    _positionMin = min;
+    _positionMax = max;
+
+    pinMode(_positionPin, INPUT);
   }
 
   int16_t temperature() {
@@ -89,9 +114,29 @@ public:
     return _pressure;
   }
 
+  uint8_t position() {
+    uint16_t rawVoltage = analogRead(_positionPin);
+
+    _voltagePosition += ((float)rawVoltage - _voltagePosition) * 0.8;
+
+    uint8_t position;
+
+    if (_voltagePosition <= _positionMin) {
+      position = 0;
+    } else if (_voltagePosition >= _positionMax) {
+      position = 100;
+    } else {
+      position = (uint32_t)(_voltagePosition - _positionMin) * 100 /
+              (_positionMax - _positionMin);
+    }
+
+    return position;
+  }
+
   uint16_t pressureInMM() { return (uint32_t)_pressure * 1000 / kpaToMM; }
   uint16_t voltageMap() { return _voltageMap; }
   uint16_t voltageTemp() { return _voltageTemp; }
+  uint16_t voltagePosition() { return _voltagePosition; }
 
 private:
   float _deltaMAP;
@@ -99,10 +144,13 @@ private:
 
   const float kpaToMM = 133.3224;
 
-  const uint8_t _tempPin;
-  const uint8_t _mapPin;
+  uint8_t _tempPin;
+  uint8_t _mapPin;
+  uint8_t _positionPin;
 
   uint16_t _pressure;
 
-  float _voltageMap, _voltageTemp;
+  uint16_t _positionMin, _positionMax;
+
+  float _voltageMap, _voltageTemp, _voltagePosition;
 };
