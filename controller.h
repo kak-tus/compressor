@@ -6,12 +6,12 @@ public:
     // Don't use real initial percent
     // this controller control how MUST be percent set, but not real percent
     // Real and wanted percents controlled by throttle
-    _position = 100;
+    _position = maximumOpen;
   }
 
-  void poweroff() { _position = 100; }
+  void poweroff() { _position = maximumOpen; }
 
-  void poweron() { _position = 100; }
+  void poweron() { _position = maximumOpen; }
 
   void control(uint16_t pressure2, uint8_t positionMainThrottle) {
     _pressure2 = pressure2;
@@ -29,7 +29,7 @@ public:
 
       incPosition();
     } else if (_positionMainThrottle < 10) {
-      setPosition(100);
+      setPosition(maximumOpen);
     } else if (_positionMainThrottle < 15) {
       incPosition();
     } else if (_positionMainThrottle > 20) {
@@ -75,7 +75,7 @@ private:
 
     _positionChanged = millis();
 
-    if (_position >= 100) {
+    if (_position >= maximumOpen) {
       return;
     }
 
@@ -101,10 +101,12 @@ private:
     _position = position;
   }
 
-  const uint16_t limitPressure2 = 130;
+  uint16_t limitPressure2 = 150;
 
   const uint8_t closeDelay = 5;
   const uint8_t openDelay = 5;
+
+  uint8_t maximumOpen = 100;
 
   // 60-70 - is ok temperature
   // 80 - is bad, stop boost
@@ -112,7 +114,7 @@ private:
   const int16_t boostLowerTemperature = 75;
 
   uint8_t _position, _minPercent;
-  unsigned long _positionChanged, _minPercentChanged, _logLimit, _logIdle;
+  unsigned long _positionChanged, _minPercentChanged, _logLimit;
 
   uint8_t _positionMainThrottle;
 

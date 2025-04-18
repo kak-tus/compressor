@@ -325,7 +325,7 @@ private:
   uint16_t minVoltageSens2 = 82;
   uint16_t maxVoltageSens2 = 922;
 
-  const uint8_t sensorsOkVoltageDelta = 16;
+  const uint8_t sensorsOkVoltageDelta = 19;
 
   BTS7960 _motor;
 
@@ -336,10 +336,10 @@ private:
 
   // Open faster, then close
   // to do blowoff
-  const uint8_t speedMinOpen = 20;
-  const uint8_t speedMaxOpen = 40;
-  const uint8_t speedMinClose = 20;
-  const uint8_t speedMaxClose = 40;
+  const uint8_t speedMinOpen = 30;
+  const uint8_t speedMaxOpen = 50;
+  const uint8_t speedMinClose = 30;
+  const uint8_t speedMaxClose = 50;
 
   bool _failed = false;
 
