@@ -17,20 +17,12 @@ public:
   }
 
   uint8_t position() {
-    uint16_t _rawVoltagePos1 = analogRead(_pos1Pin);
-    uint16_t _rawVoltagePos2 = analogRead(_pos2Pin);
+    _voltagePos1 = analogRead(_pos1Pin);
+    _voltagePos2 = analogRead(_pos2Pin);
 
-    if (_voltagePos1 == 0) {
-      _voltagePos1 = _rawVoltagePos1;
-      _voltagePos2 = _rawVoltagePos2;
-    }
-
-    _voltagePos1 += (_rawVoltagePos1 - _voltagePos1) * 0.3;
-    _voltagePos2 += (_rawVoltagePos2 - _voltagePos2) * 0.3;
-
-    if (_voltagePos1 < minVoltageSens1 + delta) {
+    if (_voltagePos1 <= minVoltageSens1) {
       _pos1 = 0;
-    } else if (_voltagePos1 > maxVoltageSens1 - delta) {
+    } else if (_voltagePos1 >= maxVoltageSens1) {
       _pos1 = 100;
     } else {
       _pos1 = (uint32_t)(_voltagePos1 - minVoltageSens1) * 100 /
@@ -176,7 +168,7 @@ public:
   void calibrateClose() {
     _motor.Enable();
 
-    _motor.TurnLeft(speedMinClose);
+    _motor.TurnLeft(speedMaxClose);
 
     delay(5);
 
@@ -188,7 +180,7 @@ public:
   void calibrateOpen() {
     _motor.Enable();
 
-    _motor.TurnRight(speedMinOpen);
+    _motor.TurnRight(speedMaxOpen);
 
     delay(5);
 
@@ -208,7 +200,6 @@ public:
 
     return true;
   }
-
 
 private:
   void syncOpen() {
@@ -313,19 +304,14 @@ private:
 
   const uint8_t _pos1Pin, _pos2Pin;
 
-  float _voltagePos1, _voltagePos2;
+  uint16_t _voltagePos1, _voltagePos2;
   uint8_t _pos1;
 
-  // Use delta to guarantee get 100% open and 0% close
-  const uint8_t delta = 5;
-
   // Max voltage as native integer data
-  uint16_t minVoltageSens1 = 116;
-  uint16_t maxVoltageSens1 = 942;
-  uint16_t minVoltageSens2 = 82;
-  uint16_t maxVoltageSens2 = 922;
+  uint16_t minVoltageSens1 = 122;
+  uint16_t maxVoltageSens1 = 936;
 
-  const uint8_t sensorsOkVoltageDelta = 19;
+  const uint8_t sensorsOkVoltageDelta = 20;
 
   BTS7960 _motor;
 
@@ -336,10 +322,10 @@ private:
 
   // Open faster, then close
   // to do blowoff
-  const uint8_t speedMinOpen = 30;
-  const uint8_t speedMaxOpen = 50;
-  const uint8_t speedMinClose = 30;
-  const uint8_t speedMaxClose = 50;
+  const uint8_t speedMinOpen = 50;
+  const uint8_t speedMaxOpen = 70;
+  const uint8_t speedMinClose = 50;
+  const uint8_t speedMaxClose = 70;
 
   bool _failed = false;
 
@@ -357,7 +343,7 @@ private:
   const uint16_t openedCheckedTimeout = 5000;
 
   unsigned long _controlTime;
-  const uint16_t controlTimeout = 5;
+  const uint16_t controlTimeout = 2;
 
   GyverPID regulator = GyverPID(1, 0.1, 0.1, controlTimeout);
 

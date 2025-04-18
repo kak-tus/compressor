@@ -101,10 +101,10 @@ private:
     _position = position;
   }
 
-  uint16_t limitPressure2 = 150;
+  uint16_t limitPressure2 = 170;
 
-  const uint8_t closeDelay = 5;
-  const uint8_t openDelay = 5;
+  const uint8_t closeDelay = 2;
+  const uint8_t openDelay = 2;
 
   uint8_t maximumOpen = 100;
 
