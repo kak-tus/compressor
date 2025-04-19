@@ -2,7 +2,6 @@
 #include <TimerMs.h>
 
 #include "calibrate.h"
-#include "consumptionControl.h"
 #include "controller.h"
 #include "emulator.h"
 #include "errors.h"
@@ -36,7 +35,6 @@ const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_EMULATOR = false;
 const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
-const bool LOG_CONSUMPTION = false;
 const bool LOG_COMPRESSOR_STATUS = false;
 
 const uint8_t PUMP_PIN = 7;
@@ -56,16 +54,14 @@ const uint8_t BEEP_PIN = 10;
 
 TimerMs poweroffCheck(100, true, false);
 TimerMs logMain(100, true, false);
-TimerMs logTemp(1000, true, false);
-TimerMs logPressure(100, true, false);
+TimerMs logTemp(10000, true, false);
+TimerMs logPressure(10, true, false);
 TimerMs logPosition(100, true, false);
 TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
-TimerMs consumptionCheck(500, true, false);
 TimerMs sensorsCheck(500, true, false);
 
-unsigned long consumptionCheckLogged;
 unsigned long sensorsCheckLogged;
 
 PowerOff powerOff(POWEROFF_PIN);
@@ -142,9 +138,6 @@ Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN,
 
 const uint8_t R_IS_L_IS_VIRTUAL_PIN = 1;
 const uint8_t COMPRESSOR_CONSUMPTION_VIRTUAL_PIN = 2;
-
-ConsumptionControl consumption(COMPRESSOR_CONSUMPTION_VIRTUAL_PIN, 100,
-                               &muxRead);
 
 void setup() { Serial.begin(115200); }
 
@@ -275,17 +268,6 @@ void loopNormal() {
     cntrl.setTemperature(temp);
   }
 
-  if (consumptionCheck.tick() && !poweredoff) {
-    if (consumption.failed() && timeout(consumptionCheckLogged, 5000)) {
-      consumptionCheckLogged = millis();
-
-      Serial.print("Failed compressor: no consumption, current=");
-      Serial.println(consumption.consumption());
-
-      err.error(Errors::ERR_COMPRESSOR_CONSUMPTION);
-    }
-  }
-
   if (sensorsCheck.tick() && !poweredoff) {
     if (!thr.sensorsOk() && timeout(sensorsCheckLogged, 5000)) {
       sensorsCheckLogged = millis();
@@ -397,11 +379,6 @@ void log() {
     if (LOG_CONTROLLER_INTERNAL) {
       Serial.print(">controller position:");
       Serial.println(cntrl.positionVal());
-    }
-
-    if (LOG_CONSUMPTION) {
-      Serial.print(">consumption compressor:");
-      Serial.println(consumption.consumption());
     }
   }
 }

@@ -6,7 +6,6 @@ public:
   // 0 - short beep
   // 1 - long beep
   static const uint8_t ERR_THR_SENSORS = 0b0;
-  static const uint8_t ERR_COMPRESSOR_CONSUMPTION = 0b1;
 
   Errors(uint8_t pin) : _pin(pin) { pinMode(pin, OUTPUT); }
 
