@@ -33,6 +33,8 @@ public:
     } else if (_positionMainThrottle < 15) {
       incPosition();
     } else if (_positionMainThrottle > 20) {
+      decPositionSlow();
+    } else if (_positionMainThrottle > 30) {
       decPosition();
     }
 
@@ -96,6 +98,20 @@ private:
     _position--;
   }
 
+  void decPositionSlow() {
+    if (!timeout(_positionChanged, closeDelaySlow)) {
+      return;
+    }
+
+    _positionChanged = millis();
+
+    if (_position == 0) {
+      return;
+    }
+
+    _position--;
+  }
+
   void setPosition(uint8_t position) {
     _positionChanged = millis();
     _position = position;
@@ -104,6 +120,7 @@ private:
   uint16_t limitPressure2 = 170;
 
   const uint8_t closeDelay = 2;
+  const uint8_t closeDelaySlow = 50;
   const uint8_t openDelay = 2;
 
   uint8_t maximumOpen = 100;

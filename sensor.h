@@ -99,9 +99,7 @@ public:
   }
 
   uint16_t pressure() {
-    uint16_t rawVoltage = analogRead(_mapPin);
-
-    _voltageMap += ((float)rawVoltage - _voltageMap) * 0.5;
+    _voltageMap = analogRead(_mapPin);
 
     float raw = (_voltageMap + _deltaMAP) * _angleMAP;
 
@@ -152,5 +150,6 @@ private:
 
   uint16_t _positionMin, _positionMax;
 
-  float _voltageMap, _voltageTemp, _voltagePosition;
+  uint16_t _voltageMap;
+  float _voltageTemp, _voltagePosition;
 };
