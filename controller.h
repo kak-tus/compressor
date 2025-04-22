@@ -32,10 +32,10 @@ public:
       setPosition(maximumOpen);
     } else if (_positionMainThrottle < 15) {
       incPosition();
+    } else if (_positionMainThrottle > 40) {
+      decPosition();
     } else if (_positionMainThrottle > 20) {
       decPositionSlow();
-    } else if (_positionMainThrottle > 30) {
-      decPosition();
     }
 
     return _position;
