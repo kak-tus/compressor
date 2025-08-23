@@ -19,16 +19,7 @@ public:
   }
 
   uint8_t position() {
-    if (_pressure2 > limitPressure2) {
-      if (timeout(_logLimit, 1000)) {
-        _logLimit = millis();
-
-        Serial.print("Pressure limit: pressure2=");
-        Serial.println(_pressure2);
-      }
-
-      incPosition();
-    } else if (_positionMainThrottle < 10) {
+    if (_positionMainThrottle < 10) {
       setPosition(maximumOpen);
     } else if (_positionMainThrottle < 15) {
       incPosition();
