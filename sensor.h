@@ -1,23 +1,5 @@
 class Sensor {
 public:
-  Sensor(uint8_t tempPin, uint8_t mapPin, float deltaMAP, float angleMAP) {
-    _tempPin = tempPin;
-    _mapPin = mapPin;
-    _deltaMAP = deltaMAP;
-    _angleMAP = angleMAP;
-
-    pinMode(_tempPin, INPUT);
-    pinMode(_mapPin, INPUT);
-  }
-
-  Sensor(uint8_t mapPin, float deltaMAP, float angleMAP) {
-    _mapPin = mapPin;
-    _deltaMAP = deltaMAP;
-    _angleMAP = angleMAP;
-
-    pinMode(_mapPin, INPUT);
-  }
-
   Sensor(uint8_t tempPin) {
     _tempPin = tempPin;
 
@@ -98,20 +80,6 @@ public:
     return _temp;
   }
 
-  uint16_t pressure() {
-    _voltageMap = analogRead(_mapPin);
-
-    float raw = (_voltageMap + _deltaMAP) * _angleMAP;
-
-    if (raw < 0) {
-      _pressure = 0;
-    } else {
-      _pressure = raw;
-    }
-
-    return _pressure;
-  }
-
   uint8_t position() {
     uint16_t rawVoltage = analogRead(_positionPin);
 
@@ -131,25 +99,14 @@ public:
     return position;
   }
 
-  uint16_t pressureInMM() { return (uint32_t)_pressure * 1000 / kpaToMM; }
-  uint16_t voltageMap() { return _voltageMap; }
   uint16_t voltageTemp() { return _voltageTemp; }
   uint16_t voltagePosition() { return _voltagePosition; }
 
 private:
-  float _deltaMAP;
-  float _angleMAP;
-
-  const float kpaToMM = 133.3224;
-
   uint8_t _tempPin;
-  uint8_t _mapPin;
   uint8_t _positionPin;
-
-  uint16_t _pressure;
 
   uint16_t _positionMin, _positionMax;
 
-  uint16_t _voltageMap;
   float _voltageTemp, _voltagePosition;
 };

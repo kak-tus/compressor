@@ -13,8 +13,7 @@ public:
 
   void poweron() { _position = maximumOpen; }
 
-  void control(uint16_t pressure2, uint8_t positionMainThrottle) {
-    _pressure2 = pressure2;
+  void control(uint8_t positionMainThrottle) {
     _positionMainThrottle = positionMainThrottle;
   }
 
@@ -125,6 +124,4 @@ private:
   unsigned long _positionChanged, _minPercentChanged, _logLimit;
 
   uint8_t _positionMainThrottle;
-
-  uint16_t _pressure2;
 };
