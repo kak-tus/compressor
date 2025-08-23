@@ -3,7 +3,6 @@
 
 #include "calibrate.h"
 #include "controller.h"
-#include "emulator.h"
 #include "errors.h"
 #include "multiplexor.h"
 #include "poweroff.h"
@@ -32,8 +31,6 @@ const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
 const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_EMULATOR = false;
-const bool LOG_EMULATOR_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_COMPRESSOR_STATUS = false;
 
@@ -99,13 +96,6 @@ Sensor sens2(MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
 // Main throttle (uncontrolled)
 Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
 
-const bool USE_EMULATOR = false;
-
-const uint8_t EMULATOR_VIRTUAL_PIN = 3;
-
-Emulator emul1(EMULATOR_VIRTUAL_PIN, Emulator::BEFORE_THROTTLE, &muxRead);
-Emulator emul2(EMULATOR_VIRTUAL_PIN, Emulator::AFTER_THROTTLE, &muxRead);
-
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
 
@@ -136,7 +126,6 @@ const uint8_t MUX_GND_VIRTUAL_PIN = 0;
 Multiplexor mux(MUX_Z_PIN, MUX_E_PIN, MUX_S0_PIN, MUX_S1_PIN,
                 MUX_GND_VIRTUAL_PIN);
 
-const uint8_t R_IS_L_IS_VIRTUAL_PIN = 1;
 const uint8_t COMPRESSOR_CONSUMPTION_VIRTUAL_PIN = 2;
 
 void setup() { Serial.begin(115200); }
@@ -219,14 +208,7 @@ void loopNormal() {
   cntrl.control(pressure2, sensThrottle.position());
 
   if (!poweredoff) {
-    if (USE_EMULATOR) {
-      emul1.setRealThrottle(thr.position());
-      emul2.setRealThrottle(thr.position());
-
-      thr.hold(cntrl.position());
-    } else {
-      thr.hold(cntrl.position());
-    }
+    thr.hold(cntrl.position());
   }
 
   thr.control();
@@ -289,13 +271,8 @@ void log() {
   }
 
   if (LOG_PRESSURE && logPressure.tick()) {
-    if (USE_EMULATOR) {
-      Serial.print(">sens2 emulated pressure (kpa):");
-      Serial.println(emul2.pressure());
-    } else {
-      Serial.print(">sens2 pressure (kpa):");
-      Serial.println(sens2.pressure());
-    }
+    Serial.print(">sens2 pressure (kpa):");
+    Serial.println(sens2.pressure());
   }
 
   if (LOG_POSITION && logPosition.tick()) {
@@ -355,25 +332,6 @@ void log() {
 
       Serial.print(">throttle hold direction:");
       Serial.println(thr.holdDirection());
-    }
-
-    if (USE_EMULATOR && LOG_EMULATOR) {
-      Serial.print(">emulator throttle position:");
-      Serial.println(emul1.throttle());
-
-      Serial.print(">emulator rpm:");
-      Serial.println(emul1.rpm());
-    }
-
-    if (USE_EMULATOR && LOG_EMULATOR_INTERNAL) {
-      Serial.print(">emulator efficiency:");
-      Serial.println(emul1.efficiency());
-
-      Serial.print(">emulator pressure clear:");
-      Serial.println(emul1.pressureClear());
-
-      Serial.print(">emulator voltage:");
-      Serial.println(emul1.voltage());
     }
 
     if (LOG_CONTROLLER_INTERNAL) {
