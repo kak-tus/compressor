@@ -107,8 +107,6 @@ private:
     _position = position;
   }
 
-  uint16_t limitPressure2 = 170;
-
   const uint8_t closeDelay = 2;
   const uint8_t closeDelaySlow = 50;
   const uint8_t openDelay = 2;
@@ -121,7 +119,7 @@ private:
   const int16_t boostLowerTemperature = 75;
 
   uint8_t _position, _minPercent;
-  unsigned long _positionChanged, _minPercentChanged, _logLimit;
+  unsigned long _positionChanged, _minPercentChanged;
 
   uint8_t _positionMainThrottle;
 };
