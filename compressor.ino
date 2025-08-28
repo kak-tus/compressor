@@ -1,7 +1,6 @@
 #include <BTS7960.h>
 #include <TimerMs.h>
 
-#include "calibrate.h"
 #include "controller.h"
 #include "errors.h"
 #include "poweroff.h"
@@ -85,7 +84,6 @@ const uint8_t COMPRESSOR_PIN = 4;
 Switch compressor(COMPRESSOR_PIN);
 
 const bool USE_CALIBRATE = false;
-Calibrate clbr;
 
 void setup() { Serial.begin(115200); }
 
@@ -156,6 +154,34 @@ void loopCalibrate() {
   Serial.println(minPos2);
   Serial.print("Max voltage 2: ");
   Serial.println(maxPos2);
+
+  Serial.println("Now, change main throttle position by pressing gaz pedal to "
+                 "minimum and maximum position");
+
+  // need to read position to fill voltages
+  sensThrottle.position();
+
+  started = millis();
+
+  uint16_t maxMainThrottle = sensThrottle.voltagePosition(),
+           minMainThrottle = sensThrottle.voltagePosition();
+
+  while (!timeout(started, 10000)) {
+    // need to read position to fill voltages
+    sensThrottle.position();
+
+    if (sensThrottle.voltagePosition() < minMainThrottle) {
+      minMainThrottle = sensThrottle.voltagePosition();
+    }
+    if (sensThrottle.voltagePosition() > maxMainThrottle) {
+      maxMainThrottle = sensThrottle.voltagePosition();
+    }
+  }
+
+  Serial.print("Main throttle min voltage: ");
+  Serial.println(minMainThrottle);
+  Serial.print("Main throttle max voltage: ");
+  Serial.println(maxMainThrottle);
 
   while (true) {
   }

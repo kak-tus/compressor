@@ -58,12 +58,15 @@ public:
       return;
     default:
       if (timeout(_openedChecked, openedCheckedTimeout)) {
-        // Periodically check that throttle wasn't uncontrolled open
+        // Periodically check that throttle wasn't uncontrolled move
         _openedChecked = millis();
 
         uint8_t _currPos = position();
 
         if (_currPos < 100) {
+          // Checked in poweroff
+          _holdStatus = IN_HOLD;
+
           poweroff();
         }
       }
@@ -296,8 +299,9 @@ private:
       int val = regulator.getResultNow();
       open(val);
     } else {
+      stop();
       _motor.Disable();
-      _holdStatus = holdStatusType(0);
+      _holdStatus = NO_HOLD;
       _holdReached = true;
     }
   }
@@ -331,7 +335,7 @@ private:
 
   const uint16_t _operationLimit = 2000;
 
-  enum holdStatusType { IN_HOLD = 1, IN_POWEROFF };
+  enum holdStatusType { NO_HOLD = 0, IN_HOLD = 1, IN_POWEROFF = 2 };
   holdStatusType _holdStatus;
 
   bool _holdReached;
