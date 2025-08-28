@@ -44,14 +44,13 @@ const uint8_t L_PWM_PIN = 5;
 
 const uint8_t BEEP_PIN = 10;
 
-TimerMs poweroffCheck(100, true, false);
 TimerMs logMain(100, true, false);
 TimerMs logTemp(10000, true, false);
 TimerMs logPosition(100, true, false);
 TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
-TimerMs sensorsCheck(500, true, false);
+TimerMs sensorsCheck(10000, true, false);
 
 unsigned long sensorsCheckLogged;
 
@@ -196,28 +195,26 @@ void loopNormal() {
 
   thr.control();
 
-  if (poweroffCheck.tick()) {
-    if (powerOff.need() && !poweredoff) {
-      Serial.println("Power off");
+  if (powerOff.need() && !poweredoff) {
+    Serial.println("Power off");
 
-      poweredoff = true;
+    poweredoff = true;
 
-      powerOffNotify.poweroff();
-      compressor.poweroff();
-      thr.poweroff();
+    powerOffNotify.poweroff();
+    compressor.poweroff();
+    thr.poweroff();
 
-      tControlPump.poweroff();
-      tControlCooler.poweroff();
-      cntrl.poweroff();
-    } else if (!powerOff.need() && poweredoff) {
-      Serial.println("Power on");
+    tControlPump.poweroff();
+    tControlCooler.poweroff();
+    cntrl.poweroff();
+  } else if (!powerOff.need() && poweredoff) {
+    Serial.println("Power on");
 
-      poweredoff = false;
+    poweredoff = false;
 
-      powerOffNotify.poweron();
-      compressor.poweron();
-      cntrl.poweron();
-    }
+    powerOffNotify.poweron();
+    compressor.poweron();
+    cntrl.poweron();
   }
 
   if (logMain.tick()) {

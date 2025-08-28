@@ -22,7 +22,7 @@ public:
   }
 
 private:
-  const int DEBOUNCE = 100;
+  const int DEBOUNCE = 10;
 
   const uint8_t _pin;
   uint32_t _tmr;
