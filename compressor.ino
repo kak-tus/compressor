@@ -189,13 +189,9 @@ void loopCalibrate() {
 void loopNormal() {
   cntrl.control(sensThrottle.position());
 
-  if (!poweredoff) {
-    thr.hold(cntrl.position());
-  }
+  bool powerOffNeed = powerOff.need();
 
-  thr.control();
-
-  if (powerOff.need() && !poweredoff) {
+  if (powerOffNeed && !poweredoff) {
     Serial.println("Power off");
 
     poweredoff = true;
@@ -207,7 +203,7 @@ void loopNormal() {
     tControlPump.poweroff();
     tControlCooler.poweroff();
     cntrl.poweroff();
-  } else if (!powerOff.need() && poweredoff) {
+  } else if (!powerOffNeed && poweredoff) {
     Serial.println("Power on");
 
     poweredoff = false;
@@ -216,6 +212,12 @@ void loopNormal() {
     compressor.poweron();
     cntrl.poweron();
   }
+
+  if (!poweredoff) {
+    thr.hold(cntrl.position());
+  }
+
+  thr.control();
 
   if (logMain.tick()) {
     log();
