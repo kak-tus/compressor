@@ -44,11 +44,17 @@ public:
         if (_position < _minPosition) {
           _position = _minPosition;
         }
+
+        Serial.print("Overheat, set min position to ");
+        Serial.println(_minPosition);
       }
     } else {
       if (_minPosition > 0 && timeout(_minPercentChanged, 10000)) {
         _minPosition--;
         _minPercentChanged = millis();
+
+        Serial.print("Overheat off, set min position to ");
+        Serial.println(_minPosition);
       }
     }
   }
