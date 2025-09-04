@@ -18,13 +18,13 @@ public:
   }
 
   uint8_t position() {
-    if (_positionMainThrottle < 10) {
+    if (_positionMainThrottle < 5) {
       setPosition(maximumOpen);
-    } else if (_positionMainThrottle < 15) {
+    } else if (_positionMainThrottle < 10) {
       incPosition();
-    } else if (_positionMainThrottle > 40) {
-      decPosition();
     } else if (_positionMainThrottle > 20) {
+      decPosition();
+    } else if (_positionMainThrottle > 15) {
       decPositionSlow();
     }
 
@@ -33,17 +33,21 @@ public:
 
   void setTemperature(int16_t temperature) {
     if (temperature > boostOffTemperature) {
-      _minPercent = 100;
+      _minPosition = 100;
       _minPercentChanged = millis();
       return;
     } else if (temperature > boostLowerTemperature) {
-      if (_minPercent < 100 && timeout(_minPercentChanged, 5000)) {
-        _minPercent++;
+      if (_minPosition < 100 && timeout(_minPercentChanged, 2000)) {
+        _minPosition++;
         _minPercentChanged = millis();
+
+        if (_position < _minPosition) {
+          _position = _minPosition;
+        }
       }
     } else {
-      if (_minPercent > 0 && timeout(_minPercentChanged, 10000)) {
-        _minPercent--;
+      if (_minPosition > 0 && timeout(_minPercentChanged, 10000)) {
+        _minPosition--;
         _minPercentChanged = millis();
       }
     }
@@ -85,6 +89,10 @@ private:
       return;
     }
 
+    if (_position <= _minPosition) {
+      return;
+    }
+
     _position--;
   }
 
@@ -96,6 +104,10 @@ private:
     _positionChanged = millis();
 
     if (_position == 0) {
+      return;
+    }
+
+    if (_position <= _minPosition) {
       return;
     }
 
@@ -118,7 +130,7 @@ private:
   const int16_t boostOffTemperature = 80;
   const int16_t boostLowerTemperature = 75;
 
-  uint8_t _position, _minPercent;
+  uint8_t _position, _minPosition;
   unsigned long _positionChanged, _minPercentChanged;
 
   uint8_t _positionMainThrottle;
