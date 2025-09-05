@@ -214,6 +214,12 @@ void loopNormal() {
   if (!poweredoff) {
     cntrl.control(sensThrottle.position());
     thr.hold(cntrl.position());
+
+    if (cntrl.allowCompressor()) {
+      compressor.poweron();
+    } else {
+      compressor.poweroff();
+    }
   }
 
   thr.control();

@@ -12,10 +12,12 @@ public:
   void poweroff() {
     _position = MAXIMUM_OPEN;
     _poweredoffAt = millis();
+    _allowCompressor = false;
   }
 
   void poweron() {
     _position = MAXIMUM_OPEN;
+    _allowCompressor = true;
 
     if (_poweredoffAt != 0 && !timeout(_poweredoffAt, 2000)) {
       if (_mode == PERFOMANCE) {
@@ -30,10 +32,10 @@ public:
     }
   }
 
-  void control(uint8_t positionMainThrottle) {
+  void control(uint8_t posMainThrottle) {
     if (_mode == PERFOMANCE) {
       int16_t delta =
-          (int16_t)_prevPositionMainThrottle - (int16_t)positionMainThrottle;
+          (int16_t)_prevPositionMainThrottle - (int16_t)posMainThrottle;
 
       if (delta > 2 && _blowOffCheckStartedAt == 0) {
         _blowOffCheckStartedAt = millis();
@@ -42,11 +44,10 @@ public:
         Serial.print("Blowoff: start check from ");
         Serial.print(_prevPositionMainThrottle);
         Serial.print(" to ");
-        Serial.println(positionMainThrottle);
+        Serial.println(posMainThrottle);
       }
 
-      delta =
-          (int16_t)_blowOffPositionCheckStarted - (int16_t)positionMainThrottle;
+      delta = (int16_t)_blowOffPositionCheckStarted - (int16_t)posMainThrottle;
 
       if (_blowOffCheckStartedAt != 0 && timeout(_blowOffCheckStartedAt, 100)) {
         if (delta >= BLOWOFF_DELTA) {
@@ -56,7 +57,7 @@ public:
           _blowOffCheckStartedAt = 0;
           _blowOffPositionCheckStarted = 0;
 
-          _prevPositionMainThrottle = positionMainThrottle;
+          _prevPositionMainThrottle = posMainThrottle;
           _positionMainThrottleTimeout = millis();
 
           Serial.println("Blowoff: do blowoff");
@@ -71,7 +72,7 @@ public:
         _blowOffCheckStartedAt = 0;
         _blowOffPositionCheckStarted = 0;
 
-        _prevPositionMainThrottle = positionMainThrottle;
+        _prevPositionMainThrottle = posMainThrottle;
         _positionMainThrottleTimeout = millis();
 
         Serial.println("Blowoff: do blowoff");
@@ -82,17 +83,45 @@ public:
       }
 
       if (timeout(_positionMainThrottleTimeout, 50)) {
-        _prevPositionMainThrottle = positionMainThrottle;
+        _prevPositionMainThrottle = posMainThrottle;
         _positionMainThrottleTimeout = millis();
       }
     } else {
-      if (positionMainThrottle < 5) {
+      if (posMainThrottle < 5) {
+        _allowAt = 0;
+
+        if (_allowCompressor && _disallowAt == 0) {
+          _disallowAt = millis();
+        }
+      } else {
+        _disallowAt = 0;
+
+        if (!_allowCompressor && _allowAt == 0) {
+          _allowAt = millis();
+        }
+      }
+
+      if (_disallowAt != 0 && timeout(_disallowAt, 2000)) {
+        _allowCompressor = false;
+        _disallowAt = 0;
+        _allowAt = 0;
+
+        Serial.println("Disallow compressor: disallow");
+      } else if (_allowAt != 0 && timeout(_allowAt, 100)) {
+        _allowCompressor = true;
+        _disallowAt = 0;
+        _allowAt = 0;
+
+        Serial.println("Disallow compressor: allow");
+      }
+
+      if (posMainThrottle < 5) {
         setPosition(MAXIMUM_OPEN);
-      } else if (positionMainThrottle < 10) {
+      } else if (posMainThrottle < 10) {
         incPosition();
-      } else if (positionMainThrottle > 20) {
+      } else if (posMainThrottle > 25) {
         decPosition();
-      } else if (positionMainThrottle > 15) {
+      } else if (posMainThrottle > 15) {
         decPositionSlow();
       }
     }
@@ -129,6 +158,7 @@ public:
   }
 
   uint8_t positionVal() { return _position; }
+  uint8_t allowCompressor() { return _allowCompressor; }
 
 private:
   bool timeout(unsigned long start, uint16_t operationLimit) {
@@ -218,7 +248,9 @@ private:
   uint8_t _prevPositionMainThrottle, _blowOffPositionCheckStarted;
 
   unsigned long _blowOffCheckStartedAt, _blowOffStartedAt,
-      _positionMainThrottleTimeout;
+      _positionMainThrottleTimeout, _disallowAt, _allowAt;
 
   const uint8_t BLOWOFF_DELTA = 10;
+
+  bool _allowCompressor = true;
 };
