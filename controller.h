@@ -6,30 +6,99 @@ public:
     // Don't use real initial percent
     // this controller control how MUST be percent set, but not real percent
     // Real and wanted percents controlled by throttle
-    _position = maximumOpen;
+    _position = MAXIMUM_OPEN;
   }
 
-  void poweroff() { _position = maximumOpen; }
+  void poweroff() {
+    _position = MAXIMUM_OPEN;
+    _poweredoffAt = millis();
+  }
 
-  void poweron() { _position = maximumOpen; }
+  void poweron() {
+    _position = MAXIMUM_OPEN;
+
+    if (_poweredoffAt != 0 && !timeout(_poweredoffAt, 2000)) {
+      if (_mode == PERFOMANCE) {
+        _mode = NORMAL;
+
+        Serial.println("Mode: normal");
+      } else {
+        _mode = PERFOMANCE;
+
+        Serial.println("Mode: perfomance");
+      }
+    }
+  }
 
   void control(uint8_t positionMainThrottle) {
-    _positionMainThrottle = positionMainThrottle;
-  }
+    if (_mode == PERFOMANCE) {
+      int16_t delta =
+          (int16_t)_prevPositionMainThrottle - (int16_t)positionMainThrottle;
 
-  uint8_t position() {
-    if (_positionMainThrottle < 5) {
-      setPosition(maximumOpen);
-    } else if (_positionMainThrottle < 10) {
-      incPosition();
-    } else if (_positionMainThrottle > 20) {
-      decPosition();
-    } else if (_positionMainThrottle > 15) {
-      decPositionSlow();
+      if (delta > 2 && _blowOffCheckStartedAt == 0) {
+        _blowOffCheckStartedAt = millis();
+        _blowOffPositionCheckStarted = _prevPositionMainThrottle;
+
+        Serial.print("Blowoff: start check from ");
+        Serial.print(_prevPositionMainThrottle);
+        Serial.print(" to ");
+        Serial.println(positionMainThrottle);
+      }
+
+      delta =
+          (int16_t)_blowOffPositionCheckStarted - (int16_t)positionMainThrottle;
+
+      if (_blowOffCheckStartedAt != 0 && timeout(_blowOffCheckStartedAt, 100)) {
+        if (delta >= BLOWOFF_DELTA) {
+          setPosition(BLOWOFF_OPEN);
+          _blowOffStartedAt = millis();
+
+          _blowOffCheckStartedAt = 0;
+          _blowOffPositionCheckStarted = 0;
+
+          _prevPositionMainThrottle = positionMainThrottle;
+          _positionMainThrottleTimeout = millis();
+
+          Serial.println("Blowoff: do blowoff");
+        } else {
+          _blowOffCheckStartedAt = 0;
+          _blowOffPositionCheckStarted = 0;
+        }
+      } else if (delta >= BLOWOFF_DELTA) {
+        setPosition(BLOWOFF_OPEN);
+        _blowOffStartedAt = millis();
+
+        _blowOffCheckStartedAt = 0;
+        _blowOffPositionCheckStarted = 0;
+
+        _prevPositionMainThrottle = positionMainThrottle;
+        _positionMainThrottleTimeout = millis();
+
+        Serial.println("Blowoff: do blowoff");
+      }
+
+      if (_blowOffStartedAt == 0 || timeout(_blowOffStartedAt, 100)) {
+        setPosition(MAXIMUM_CLOSE);
+      }
+
+      if (timeout(_positionMainThrottleTimeout, 50)) {
+        _prevPositionMainThrottle = positionMainThrottle;
+        _positionMainThrottleTimeout = millis();
+      }
+    } else {
+      if (positionMainThrottle < 5) {
+        setPosition(MAXIMUM_OPEN);
+      } else if (positionMainThrottle < 10) {
+        incPosition();
+      } else if (positionMainThrottle > 20) {
+        decPosition();
+      } else if (positionMainThrottle > 15) {
+        decPositionSlow();
+      }
     }
-
-    return _position;
   }
+
+  uint8_t position() { return _position; }
 
   void setTemperature(int16_t temperature) {
     if (temperature > boostOffTemperature) {
@@ -45,7 +114,7 @@ public:
           _position = _minPosition;
         }
 
-        Serial.print("Overheat, set min position to ");
+        Serial.print("Overheat on, set min position to ");
         Serial.println(_minPosition);
       }
     } else {
@@ -77,7 +146,7 @@ private:
 
     _positionChanged = millis();
 
-    if (_position >= maximumOpen) {
+    if (_position >= MAXIMUM_OPEN) {
       return;
     }
 
@@ -129,7 +198,9 @@ private:
   const uint8_t closeDelaySlow = 50;
   const uint8_t openDelay = 2;
 
-  uint8_t maximumOpen = 100;
+  const uint8_t MAXIMUM_OPEN = 100;
+  const uint8_t MAXIMUM_CLOSE = 0;
+  const uint8_t BLOWOFF_OPEN = 10;
 
   // 60-70 - is ok temperature
   // 80 - is bad, stop boost
@@ -139,5 +210,15 @@ private:
   uint8_t _position, _minPosition;
   unsigned long _positionChanged, _minPercentChanged;
 
-  uint8_t _positionMainThrottle;
+  enum modeType { NORMAL = 0, PERFOMANCE = 1, COMFORT = 2 };
+  modeType _mode = NORMAL;
+
+  unsigned long _poweredoffAt;
+
+  uint8_t _prevPositionMainThrottle, _blowOffPositionCheckStarted;
+
+  unsigned long _blowOffCheckStartedAt, _blowOffStartedAt,
+      _positionMainThrottleTimeout;
+
+  const uint8_t BLOWOFF_DELTA = 10;
 };

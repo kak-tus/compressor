@@ -187,8 +187,6 @@ void loopCalibrate() {
 }
 
 void loopNormal() {
-  cntrl.control(sensThrottle.position());
-
   bool powerOffNeed = powerOff.need();
 
   if (powerOffNeed && !poweredoff) {
@@ -214,6 +212,7 @@ void loopNormal() {
   }
 
   if (!poweredoff) {
+    cntrl.control(sensThrottle.position());
     thr.hold(cntrl.position());
   }
 
