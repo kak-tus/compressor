@@ -14,7 +14,7 @@ public:
       digitalWrite(_pin, OFF);
     }
 
-    regulator.setpoint = onTemp;
+    regulator.setpoint = offTemp;
     regulator.setDirection(REVERSE);
     regulator.setLimits(minPWM, maxPWM);
   }
@@ -59,6 +59,8 @@ public:
 
     _on = false;
   }
+
+  int regulatorValue() { return regulator.getResult(); }
 
 private:
   const uint8_t _pin;

@@ -93,7 +93,7 @@ public:
         if (_allowCompressor && _disallowAt == 0) {
           _disallowAt = millis();
         }
-      } else {
+      } else if (posMainThrottle > 10) {
         _disallowAt = 0;
 
         if (!_allowCompressor && _allowAt == 0) {

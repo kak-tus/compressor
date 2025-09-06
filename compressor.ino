@@ -28,6 +28,7 @@ const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_COMPRESSOR_STATUS = false;
+const bool LOG_COOLER_INTERNAL = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
@@ -35,8 +36,8 @@ const uint8_t COOLER_PIN = 9;
 const uint8_t PUMP_ON_TEMPERATURE = 35;
 const uint8_t PUMP_OFF_TEMPERATURE = 10;
 
-const uint8_t COOLER_ON_TEMPERATURE = 45;
-const uint8_t COOLER_OFF_TEMPERATURE = 23;
+const uint8_t COOLER_ON_TEMPERATURE = 40;
+const uint8_t COOLER_OFF_TEMPERATURE = 35;
 
 const uint8_t EN_PIN = 3;
 const uint8_t R_PWM_PIN = 6;
@@ -313,6 +314,11 @@ void log() {
     if (LOG_CONTROLLER_INTERNAL) {
       Serial.print(">controller position:");
       Serial.println(cntrl.positionVal());
+    }
+
+    if (LOG_COOLER_INTERNAL) {
+      Serial.print(">cooler regulator position:");
+      Serial.println(tControlCooler.regulatorValue());
     }
   }
 }
