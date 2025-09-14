@@ -234,8 +234,8 @@ private:
 
   // 60-70 - is ok temperature
   // 80 - is bad, stop boost
-  const int16_t boostOffTemperature = 80;
-  const int16_t boostLowerTemperature = 75;
+  const int16_t boostOffTemperature = 70;
+  const int16_t boostLowerTemperature = 60;
 
   uint8_t _position, _minPosition;
   unsigned long _positionChanged, _minPercentChanged;
