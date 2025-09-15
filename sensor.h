@@ -15,6 +15,10 @@ public:
   }
 
   int16_t temperature() {
+    if (_poweredOff) {
+      return 0;
+    }
+
     uint16_t rawVoltage = analogRead(_tempPin);
 
     _voltageTemp += ((float)rawVoltage - _voltageTemp) * 0.5;
@@ -81,9 +85,13 @@ public:
   }
 
   uint8_t position() {
-    uint16_t rawVoltage = analogRead(_positionPin);
+    // while powered off - we disconnect sensor with relay
+    // so we got incorrect sensor data, set it to 0
+    if (_poweredOff) {
+      return 0;
+    }
 
-    _voltagePosition += ((float)rawVoltage - _voltagePosition) * 0.8;
+    _voltagePosition = analogRead(_positionPin);
 
     uint8_t position;
 
@@ -93,14 +101,31 @@ public:
       position = 100;
     } else {
       position = (uint32_t)(_voltagePosition - _positionMin) * 100 /
-              (_positionMax - _positionMin);
+                 (_positionMax - _positionMin);
     }
 
     return position;
   }
 
-  uint16_t voltageTemp() { return _voltageTemp; }
-  uint16_t voltagePosition() { return _voltagePosition; }
+  uint16_t voltageTemp() {
+    if (_poweredOff) {
+      return 0;
+    }
+
+    return _voltageTemp;
+  }
+
+  uint16_t voltagePosition() {
+    if (_poweredOff) {
+      return 0;
+    }
+
+    return _voltagePosition;
+  }
+
+  void poweroff() { _poweredOff = true; }
+
+  void poweron() { _poweredOff = false; }
 
 private:
   uint8_t _tempPin;
@@ -109,4 +134,6 @@ private:
   uint16_t _positionMin, _positionMax;
 
   float _voltageTemp, _voltagePosition;
+
+  bool _poweredOff = false;
 };

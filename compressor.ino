@@ -202,6 +202,7 @@ void loopNormal() {
     tControlPump.poweroff();
     tControlCooler.poweroff();
     cntrl.poweroff();
+    sensThrottle.poweroff();
   } else if (!powerOffNeed && poweredoff) {
     Serial.println("Power on");
 
@@ -210,6 +211,7 @@ void loopNormal() {
     powerOffNotify.poweron();
     compressor.poweron();
     cntrl.poweron();
+    sensThrottle.poweron();
   }
 
   if (!poweredoff) {
