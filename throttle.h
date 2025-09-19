@@ -326,10 +326,10 @@ private:
 
   // Open faster, then close
   // to do blowoff
-  const uint8_t speedMinOpen = 50;
-  const uint8_t speedMaxOpen = 70;
-  const uint8_t speedMinClose = 50;
-  const uint8_t speedMaxClose = 70;
+  const uint8_t speedMinOpen = 80;
+  const uint8_t speedMaxOpen = 100;
+  const uint8_t speedMinClose = 80;
+  const uint8_t speedMaxClose = 100;
 
   bool _failed = false;
 

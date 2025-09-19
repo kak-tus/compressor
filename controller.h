@@ -228,7 +228,7 @@ private:
   const uint8_t closeDelaySlow = 50;
   const uint8_t openDelay = 2;
 
-  const uint8_t MAXIMUM_OPEN = 100;
+  const uint8_t MAXIMUM_OPEN = 30;
   const uint8_t MAXIMUM_CLOSE = 0;
   const uint8_t BLOWOFF_OPEN = 10;
 
