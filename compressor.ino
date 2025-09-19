@@ -35,7 +35,7 @@ const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
 
 const uint8_t PUMP_ON_TEMPERATURE = 35;
-const uint8_t PUMP_OFF_TEMPERATURE = 10;
+const uint8_t PUMP_OFF_TEMPERATURE = 20;
 
 const uint8_t COOLER_ON_TEMPERATURE = 40;
 const uint8_t COOLER_OFF_TEMPERATURE = 35;

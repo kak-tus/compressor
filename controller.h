@@ -34,7 +34,8 @@ public:
 
   void control(uint8_t posMainThrottle) {
     if (_mode == PERFOMANCE) {
-      int16_t delta =
+      // Don't use abs here, because we check only positive delta in case of lower main throttle position
+      uint16_t delta =
           (int16_t)_prevPositionMainThrottle - (int16_t)posMainThrottle;
 
       if (delta > 2 && _blowOffCheckStartedAt == 0) {
@@ -120,7 +121,7 @@ public:
       } else if (posMainThrottle < 10) {
         incPosition();
       } else if (posMainThrottle > 25) {
-        decPosition();
+        setPosition(MAXIMUM_CLOSE);
       }
     }
   }
@@ -199,31 +200,12 @@ private:
     _position--;
   }
 
-  void decPositionSlow() {
-    if (!timeout(_positionChanged, closeDelaySlow)) {
-      return;
-    }
-
-    _positionChanged = millis();
-
-    if (_position == 0) {
-      return;
-    }
-
-    if (_position <= _minPosition) {
-      return;
-    }
-
-    _position--;
-  }
-
   void setPosition(uint8_t position) {
     _positionChanged = millis();
     _position = position;
   }
 
   const uint8_t closeDelay = 2;
-  const uint8_t closeDelaySlow = 50;
   const uint8_t openDelay = 2;
 
   const uint8_t MAXIMUM_OPEN = 30;
