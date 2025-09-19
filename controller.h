@@ -121,8 +121,6 @@ public:
         incPosition();
       } else if (posMainThrottle > 25) {
         decPosition();
-      } else if (posMainThrottle > 15) {
-        decPositionSlow();
       }
     }
   }
