@@ -14,6 +14,14 @@ public:
     pinMode(_positionPin, INPUT);
   }
 
+  Sensor(uint8_t mapPin, float deltaMAP, float angleMAP) {
+    _mapPin = mapPin;
+    _deltaMAP = deltaMAP;
+    _angleMAP = angleMAP;
+
+    pinMode(_mapPin, INPUT);
+  }
+
   int16_t temperature() {
     if (_poweredOff) {
       return 0;
@@ -107,6 +115,24 @@ public:
     return position;
   }
 
+  uint16_t pressure() {
+    if (_poweredOff) {
+      return normalPressure;
+    }
+
+    _voltageMAP = analogRead(_mapPin);
+
+    float raw = (_voltageMAP + _deltaMAP) * _angleMAP;
+
+    if (raw < 0) {
+      _pressure = 0;
+    } else {
+      _pressure = raw;
+    }
+
+    return _pressure;
+  }
+
   uint16_t voltageTemp() {
     if (_poweredOff) {
       return 0;
@@ -123,6 +149,14 @@ public:
     return _voltagePosition;
   }
 
+  uint16_t voltagePressure() {
+    if (_poweredOff) {
+      return 0;
+    }
+
+    return _voltageMAP;
+  }
+
   void poweroff() { _poweredOff = true; }
 
   void poweron() { _poweredOff = false; }
@@ -130,10 +164,19 @@ public:
 private:
   uint8_t _tempPin;
   uint8_t _positionPin;
+  uint8_t _mapPin;
+
+  float _deltaMAP;
+  float _angleMAP;
+
+  const uint16_t normalPressure = 100;
 
   uint16_t _positionMin, _positionMax;
 
   float _voltageTemp, _voltagePosition;
 
   bool _poweredOff = false;
+
+  uint16_t _pressure;
+  uint16_t _voltageMAP;
 };

@@ -28,7 +28,8 @@ const bool LOG_THROTTLE_RAW = false;
 const bool LOG_THROTTLE_INTERNAL = false;
 const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_COMPRESSOR_STATUS = false;
-const bool LOG_COOLER_INTERNAL = true;
+const bool LOG_COOLER_INTERNAL = false;
+const bool LOG_PRESSURE = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
@@ -45,6 +46,8 @@ const uint8_t L_PWM_PIN = 5;
 
 const uint8_t BEEP_PIN = 10;
 
+const uint8_t MAP2_PIN = A3;
+
 TimerMs logMain(100, true, false);
 TimerMs logTemp(10000, true, false);
 TimerMs logPosition(100, true, false);
@@ -52,6 +55,7 @@ TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs sensorsCheck(10000, true, false);
+TimerMs logPressure(10, true, false);
 
 unsigned long sensorsCheckLogged;
 
@@ -64,6 +68,32 @@ Sensor sens1(TEMP1_PIN);
 
 // Main throttle (uncontrolled)
 Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
+
+// delta = (voltage2 * pressure1 - voltage1 * pressure2) / (pressure2 -
+// pressure1)
+//
+// angle = (pressure1 - pressure2) / (voltage1 - voltage2)
+//
+// Voltages must be native arduino integer values (0-1024)
+// Pressure - is value in kpa
+//
+// nativeVoltage = voltage * 1024 / 5
+// mm to kpa mm*0.1333224
+//
+// From customer:
+// Delta -0.098
+// Angle 65.8
+//
+// Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
+//
+// 100.5408578 333
+// 42.70882656 153
+const float sensor2MapDelta = -20.07039998;
+const float sensor2MapAngle = 0.3212890624;
+
+// Sensor 2 - out sensor, after throttle
+// Only pressure
+Sensor sens2(MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
 
 Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
              R_PWM_PIN);
@@ -203,6 +233,7 @@ void loopNormal() {
     tControlCooler.poweroff();
     cntrl.poweroff();
     sensThrottle.poweroff();
+    sens2.poweroff();
   } else if (!powerOffNeed && poweredoff) {
     Serial.println("Power on");
 
@@ -212,6 +243,7 @@ void loopNormal() {
     compressor.poweron();
     cntrl.poweron();
     sensThrottle.poweron();
+    sens2.poweron();
   }
 
   if (!poweredoff) {
@@ -260,6 +292,11 @@ void log() {
     Serial.println(sens1.temperature());
   }
 
+  if (LOG_PRESSURE && logPressure.tick()) {
+    Serial.print(">sens2 pressure (kpa):");
+    Serial.println(sens2.pressure());
+  }
+
   if (LOG_POSITION && logPosition.tick()) {
     Serial.print(">throttle position:");
     Serial.println(thr.position());
@@ -280,6 +317,9 @@ void log() {
 
       Serial.print(">sens main throttle voltage position:");
       Serial.println(sensThrottle.voltagePosition());
+
+      Serial.print(">sens2 voltage map:");
+      Serial.println(sens2.voltagePressure());
     }
 
     if (LOG_THROTTLE_RAW) {
