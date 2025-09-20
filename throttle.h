@@ -96,6 +96,7 @@ public:
         setRegulator(pos, CLOSE);
       } else {
         _holdReached = true;
+        _holdReachedAt = millis();
         stop();
       }
 
@@ -110,6 +111,7 @@ public:
 
     if (pos == _currPos) {
       _holdReached = true;
+      _holdReachedAt = millis();
       stop();
       regulator.setpoint = pos;
       return;
@@ -133,7 +135,7 @@ public:
       if (_currPos < pos) {
         // Continue open
         _holdReached = false;
-        regulator.setpoint = pos;
+        setRegulator(pos, OPEN);
       } else {
         // Direction changed
         _holdDirection = CLOSE;
@@ -144,7 +146,7 @@ public:
       if (_currPos > pos) {
         // Continue close
         _holdReached = false;
-        regulator.setpoint = pos;
+        setRegulator(pos, CLOSE);
       } else {
         // Direction changed
         _holdDirection = OPEN;
@@ -165,7 +167,7 @@ public:
 
     _holdStatus = IN_POWEROFF;
     _motor.Enable();
-    setRegulator(100, OPEN);
+    setRegulatorSlow(100, OPEN);
   }
 
   void calibrateClose() {
@@ -205,18 +207,6 @@ public:
   }
 
 private:
-  void syncOpen() {
-    unsigned long start = millis();
-
-    setRegulator(100, OPEN);
-    regulator.setDt(controlTimeout);
-
-    while (position() < 100 && !timeout(start, _operationLimit)) {
-      int val = regulator.getResultTimer();
-      open(val);
-    }
-  }
-
   void close(uint8_t speed) {
     if (_status == IN_CLOSE) {
       if (_currentSpeed != speed) {
@@ -270,7 +260,21 @@ private:
     uint8_t pos = position();
 
     if (_holdReached) {
-      // TODO Add possible corrections
+      // Periodically check that throttle is fully close
+      // Only need in close mode
+      if (timeout(_holdReachedAt, 100)) {
+        _holdReachedAt = millis();
+
+        if (pos < regulator.setpoint) {
+          _holdReached = false;
+          _holdDirection = OPEN;
+          setRegulatorSlow(regulator.setpoint, OPEN);
+        } else if (pos > regulator.setpoint) {
+          _holdReached = false;
+          _holdDirection = CLOSE;
+          setRegulatorSlow(regulator.setpoint, CLOSE);
+        }
+      }
     } else {
       if (_holdDirection == OPEN) {
         if (pos < regulator.setpoint) {
@@ -278,6 +282,7 @@ private:
           open(val);
         } else {
           _holdReached = true;
+          _holdReachedAt = millis();
           stop();
         }
       } else if (_holdDirection == CLOSE) {
@@ -286,6 +291,7 @@ private:
           close(val);
         } else {
           _holdReached = true;
+          _holdReachedAt = millis();
           stop();
         }
       }
@@ -303,6 +309,7 @@ private:
       _motor.Disable();
       _holdStatus = NO_HOLD;
       _holdReached = true;
+      _holdReachedAt = millis();
     }
   }
 
@@ -326,10 +333,17 @@ private:
 
   // Open faster, then close
   // to do blowoff
-  const uint8_t speedMinOpen = 80;
+  const uint8_t speedMinOpen = 70;
   const uint8_t speedMaxOpen = 100;
-  const uint8_t speedMinClose = 80;
+  const uint8_t speedMinClose = 70;
   const uint8_t speedMaxClose = 100;
+
+  const uint8_t speedMinOpenSlow = 15;
+  const uint8_t speedMaxOpenSlow = 30;
+  const uint8_t speedMinCloseSlow = 15;
+  const uint8_t speedMaxCloseSlow = 30;
+
+  const uint8_t slowDelta = 5;
 
   bool _failed = false;
 
@@ -339,6 +353,7 @@ private:
   holdStatusType _holdStatus;
 
   bool _holdReached;
+  unsigned long _holdReachedAt;
 
   enum holdDirectionType { OPEN, CLOSE };
   holdDirectionType _holdDirection;
@@ -361,6 +376,20 @@ private:
       regulator.setDirection(NORMAL);
     } else {
       regulator.setLimits(speedMinClose, speedMaxClose);
+      regulator.setDirection(REVERSE);
+    }
+  }
+
+  void setRegulatorSlow(uint8_t pos, holdDirectionType direction) {
+    regulator.setpoint = pos;
+    regulator.output = 0;
+    regulator.getResultNow();
+
+    if (direction == OPEN) {
+      regulator.setLimits(speedMinOpenSlow, speedMaxOpenSlow);
+      regulator.setDirection(NORMAL);
+    } else {
+      regulator.setLimits(speedMinCloseSlow, speedMaxCloseSlow);
       regulator.setDirection(REVERSE);
     }
   }
