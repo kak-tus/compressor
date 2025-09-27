@@ -50,7 +50,7 @@ const uint8_t MAP2_PIN = A3;
 
 TimerMs logMain(100, true, false);
 TimerMs logTemp(10000, true, false);
-TimerMs logPosition(100, true, false);
+TimerMs logPosition(10, true, false);
 TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);

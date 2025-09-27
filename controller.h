@@ -107,13 +107,13 @@ public:
         }
       }
 
-      if (_disallowAt != 0 && timeout(_disallowAt, 2000)) {
+      if (_disallowAt != 0 && timeout(_disallowAt, disallowTimeout)) {
         _allowCompressor = false;
         _disallowAt = 0;
         _allowAt = 0;
 
         Serial.println("Disallow compressor: disallow");
-      } else if (_allowAt != 0 && timeout(_allowAt, 100)) {
+      } else if (_allowAt != 0 && timeout(_allowAt, allowTimeout)) {
         _allowCompressor = true;
         _disallowAt = 0;
         _allowAt = 0;
@@ -121,10 +121,8 @@ public:
         Serial.println("Disallow compressor: allow");
       }
 
-      if (posMainThrottle < 5) {
+      if (posMainThrottle < 10) {
         setPosition(MAXIMUM_OPEN);
-      } else if (posMainThrottle < 10) {
-        incPosition();
       } else if (posMainThrottle > 25) {
         setPosition(MAXIMUM_CLOSE);
       }
@@ -136,28 +134,8 @@ public:
   void setTemperature(int16_t temperature) {
     if (temperature > boostOffTemperature) {
       _minPosition = 100;
-      _minPercentChanged = millis();
-      return;
-    } else if (temperature > boostLowerTemperature) {
-      if (_minPosition < 100 && timeout(_minPercentChanged, 2000)) {
-        _minPosition++;
-        _minPercentChanged = millis();
-
-        if (_position < _minPosition) {
-          _position = _minPosition;
-        }
-
-        Serial.print("Overheat on, set min position to ");
-        Serial.println(_minPosition);
-      }
     } else {
-      if (_minPosition > 0 && timeout(_minPercentChanged, 10000)) {
-        _minPosition--;
-        _minPercentChanged = millis();
-
-        Serial.print("Overheat off, set min position to ");
-        Serial.println(_minPosition);
-      }
+      _minPosition = MAXIMUM_CLOSE;
     }
   }
 
@@ -173,57 +151,23 @@ private:
     return true;
   }
 
-  void incPosition() {
-    if (!timeout(_positionChanged, openDelay)) {
-      return;
-    }
-
-    _positionChanged = millis();
-
-    if (_position >= MAXIMUM_OPEN) {
-      return;
-    }
-
-    _position++;
-  }
-
-  void decPosition() {
-    if (!timeout(_positionChanged, closeDelay)) {
-      return;
-    }
-
-    _positionChanged = millis();
-
-    if (_position == 0) {
-      return;
-    }
-
-    if (_position <= _minPosition) {
-      return;
-    }
-
-    _position--;
-  }
-
   void setPosition(uint8_t position) {
-    _positionChanged = millis();
-    _position = position;
+    if (position <= _minPosition) {
+      _position = _minPosition;
+    } else {
+      _position = position;
+    }
   }
-
-  const uint8_t closeDelay = 2;
-  const uint8_t openDelay = 2;
 
   const uint8_t MAXIMUM_OPEN = 30;
   const uint8_t MAXIMUM_CLOSE = 0;
   const uint8_t BLOWOFF_OPEN = 10;
 
-  // 60-70 - is ok temperature
+  // 70 - is ok temperature
   // 80 - is bad, stop boost
-  const int16_t boostOffTemperature = 70;
-  const int16_t boostLowerTemperature = 60;
+  const int16_t boostOffTemperature = 80;
 
   uint8_t _position, _minPosition;
-  unsigned long _positionChanged, _minPercentChanged;
 
   enum modeType { NORMAL = 0, PERFOMANCE = 1, COMFORT = 2 };
   modeType _mode = NORMAL;
@@ -238,4 +182,7 @@ private:
   const uint8_t BLOWOFF_DELTA = 10;
 
   bool _allowCompressor = true;
+
+  const uint8_t allowTimeout = 100;
+  const uint8_t disallowTimeout = 1000;
 };
