@@ -290,9 +290,17 @@ private:
           int val = regulator.getResultNow();
           close(val);
         } else {
-          _holdReached = true;
-          _holdReachedAt = millis();
-          stop();
+          // Throttle in 0 position is open by pressure to 1-5 position.
+          // And we get pressure fall
+          // So don't stop throttle close
+          // Hold it "in close" in low speed
+          if (regulator.setpoint == 0) {
+            close(speedMaxCloseSlow);
+          } else {
+            _holdReached = true;
+            _holdReachedAt = millis();
+            stop();
+          }
         }
       }
     }
