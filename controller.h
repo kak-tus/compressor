@@ -40,7 +40,7 @@ public:
     if (_mode == PERFOMANCE) {
       // Don't use abs here, because we check only positive delta in case of
       // lower main throttle position
-      uint16_t delta =
+      int16_t delta =
           (int16_t)_prevPositionMainThrottle - (int16_t)posMainThrottle;
 
       if (delta > 2 && _blowOffCheckStartedAt == 0) {
