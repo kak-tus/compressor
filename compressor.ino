@@ -2,13 +2,11 @@
 #include <TimerMs.h>
 
 #include "controller.h"
-#include "errors.h"
 #include "poweroff.h"
 #include "poweroff_notify.h"
 #include "sensor.h"
 #include "switch.h"
 #include "temperature_control.h"
-#include "throttle.h"
 
 const uint8_t POWEROFF_PIN = 2;
 
@@ -18,15 +16,9 @@ const uint8_t THROTTLE_PIN = A0;
 const uint16_t THROTTLE_MIN = 90;
 const uint16_t THROTTLE_MAX = 845;
 
-const uint8_t THROTTLE_POSITION1_PIN = A1;
-const uint8_t THROTTLE_POSITION2_PIN = A2;
-
 const bool LOG_TEMPERATURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = true;
-const bool LOG_THROTTLE_RAW = false;
-const bool LOG_THROTTLE_INTERNAL = false;
-const bool LOG_CONTROLLER_INTERNAL = false;
 const bool LOG_COMPRESSOR_STATUS = false;
 const bool LOG_COOLER_INTERNAL = false;
 const bool LOG_PRESSURE = true;
@@ -40,12 +32,6 @@ const uint8_t PUMP_OFF_TEMPERATURE = 20;
 const uint8_t COOLER_ON_TEMPERATURE = 40;
 const uint8_t COOLER_OFF_TEMPERATURE = 35;
 
-const uint8_t EN_PIN = 3;
-const uint8_t R_PWM_PIN = 6;
-const uint8_t L_PWM_PIN = 5;
-
-const uint8_t BEEP_PIN = 10;
-
 const uint8_t MAP2_PIN = A3;
 
 TimerMs logMain(100, true, false);
@@ -54,15 +40,12 @@ TimerMs logPosition(10, true, false);
 TimerMs logIdle(100, true, false);
 TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
-TimerMs sensorsCheck(10000, true, false);
 TimerMs logPressure(10, true, false);
-
-unsigned long sensorsCheckLogged;
 
 PowerOff powerOff(POWEROFF_PIN);
 PowerOffNotify powerOffNotify;
 
-// Sensor 1 - in sensor, before throttle
+// Sensor 1 after compressor
 // Only temperature
 Sensor sens1(TEMP1_PIN);
 
@@ -91,19 +74,14 @@ Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
 const float sensor2MapDelta = -20.07039998;
 const float sensor2MapAngle = 0.3212890624;
 
-// Sensor 2 - out sensor, after throttle
+// Sensor 2 - main sensor, after compressor
 // Only pressure
 Sensor sens2(MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
-
-Throttle thr(THROTTLE_POSITION1_PIN, THROTTLE_POSITION2_PIN, EN_PIN, L_PWM_PIN,
-             R_PWM_PIN);
 
 TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
                                 PUMP_OFF_TEMPERATURE, false);
 TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
                                   COOLER_OFF_TEMPERATURE, true);
-
-Errors err(BEEP_PIN);
 
 bool poweredoff = true;
 
@@ -126,77 +104,18 @@ void loop() {
 }
 
 void loopCalibrate() {
-  // need to read position to fill voltages
-  thr.position();
-
-  uint16_t maxPos1 = thr.voltagePosition1(), maxPos2 = thr.voltagePosition2(),
-           minPos1 = thr.voltagePosition1(), minPos2 = thr.voltagePosition2();
-
-  unsigned long started = millis();
-
-  while (!timeout(started, 14000)) {
-    // need to read position to fill voltages
-    thr.position();
-
-    if (thr.voltagePosition1() > maxPos1) {
-      maxPos1 = thr.voltagePosition1();
-    }
-    if (thr.voltagePosition2() > maxPos2) {
-      maxPos2 = thr.voltagePosition2();
-    }
-    if (thr.voltagePosition1() < minPos1) {
-      minPos1 = thr.voltagePosition1();
-    }
-    if (thr.voltagePosition2() < minPos2) {
-      minPos2 = thr.voltagePosition2();
-    }
-
-    thr.calibrateClose();
-  }
-
-  started = millis();
-
-  while (!timeout(started, 14000)) {
-    // need to read position to fill voltages
-    thr.position();
-
-    if (thr.voltagePosition1() > maxPos1) {
-      maxPos1 = thr.voltagePosition1();
-    }
-    if (thr.voltagePosition2() > maxPos2) {
-      maxPos2 = thr.voltagePosition2();
-    }
-    if (thr.voltagePosition1() < minPos1) {
-      minPos1 = thr.voltagePosition1();
-    }
-    if (thr.voltagePosition2() < minPos2) {
-      minPos2 = thr.voltagePosition2();
-    }
-
-    thr.calibrateOpen();
-  }
-
-  Serial.print("Min voltage 1: ");
-  Serial.println(minPos1);
-  Serial.print("Max voltage 1: ");
-  Serial.println(maxPos1);
-  Serial.print("Min voltage 2: ");
-  Serial.println(minPos2);
-  Serial.print("Max voltage 2: ");
-  Serial.println(maxPos2);
-
   Serial.println("Now, change main throttle position by pressing gaz pedal to "
                  "minimum and maximum position");
 
   // need to read position to fill voltages
   sensThrottle.position();
 
-  started = millis();
+  unsigned long started = millis();
 
   uint16_t maxMainThrottle = sensThrottle.voltagePosition(),
            minMainThrottle = sensThrottle.voltagePosition();
 
-  while (!timeout(started, 10000)) {
+  while (!timeout(started, 5000)) {
     // need to read position to fill voltages
     sensThrottle.position();
 
@@ -227,7 +146,6 @@ void loopNormal() {
 
     powerOffNotify.poweroff();
     compressor.poweroff();
-    thr.poweroff();
 
     tControlPump.poweroff();
     tControlCooler.poweroff();
@@ -248,7 +166,6 @@ void loopNormal() {
 
   if (!poweredoff) {
     cntrl.control(sensThrottle.position());
-    thr.hold(cntrl.position());
 
     if (cntrl.allowCompressor()) {
       compressor.poweron();
@@ -256,8 +173,6 @@ void loopNormal() {
       compressor.poweroff();
     }
   }
-
-  thr.control();
 
   if (logMain.tick()) {
     log();
@@ -270,19 +185,6 @@ void loopNormal() {
     tControlCooler.control(temp);
 
     cntrl.setTemperature(temp);
-  }
-
-  if (sensorsCheck.tick() && !poweredoff) {
-    if (!thr.sensorsOk() && timeout(sensorsCheckLogged, 5000)) {
-      sensorsCheckLogged = millis();
-
-      Serial.print("Failed throttle: no sensors ok, voltage1=");
-      Serial.print(thr.voltagePosition1());
-      Serial.print(", voltage2=");
-      Serial.println(thr.voltagePosition2());
-
-      err.error(Errors::ERR_THR_SENSORS);
-    }
   }
 }
 
@@ -298,9 +200,6 @@ void log() {
   }
 
   if (LOG_POSITION && logPosition.tick()) {
-    Serial.print(">throttle position:");
-    Serial.println(thr.position());
-
     Serial.print(">main throttle position:");
     Serial.println(sensThrottle.position());
   }
@@ -320,42 +219,6 @@ void log() {
 
       Serial.print(">sens2 voltage map:");
       Serial.println(sens2.voltagePressure());
-    }
-
-    if (LOG_THROTTLE_RAW) {
-      Serial.print(">throttle 1 voltage:");
-      Serial.println(thr.voltagePosition1());
-
-      Serial.print(">throttle 2 voltage:");
-      Serial.println(thr.voltagePosition2());
-
-      Serial.print(">throttle voltage sum:");
-      Serial.println(thr.voltagePosition1() + thr.voltagePosition2());
-    }
-
-    if (LOG_THROTTLE_INTERNAL) {
-      Serial.print(">throttle status:");
-      Serial.println(thr.status());
-
-      Serial.print(">throttle speed:");
-      Serial.println(thr.speed());
-
-      Serial.print(">throttle hold status:");
-      Serial.println(thr.holdStatus());
-
-      Serial.print(">throttle hold position:");
-      Serial.println(thr.holdPosition());
-
-      Serial.print(">throttle hold reached:");
-      Serial.println(thr.holdReached());
-
-      Serial.print(">throttle hold direction:");
-      Serial.println(thr.holdDirection());
-    }
-
-    if (LOG_CONTROLLER_INTERNAL) {
-      Serial.print(">controller position:");
-      Serial.println(cntrl.positionVal());
     }
 
     if (LOG_COOLER_INTERNAL) {
