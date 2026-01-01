@@ -2,36 +2,6 @@ class Controller {
 public:
   Controller() {}
 
-  void poweroff() {
-    _poweredoffAt = millis();
-    _allowCompressor = false;
-    _compressorBlocked = false;
-  }
-
-  void poweron() {
-    _poweredonAt = millis();
-    _compressorBlocked = false;
-
-    if (_poweredoffAt != 0 && !timeout(_poweredoffAt, 2000)) {
-      if (_mode == NORMAL) {
-        _mode = COMFORT;
-        _allowCompressor = false;
-
-        Serial.println("Mode: comfort");
-      } else {
-        _mode = NORMAL;
-        _allowCompressor = true;
-
-        Serial.println("Mode: normal");
-      }
-    } else {
-      _mode = NORMAL;
-      _allowCompressor = false;
-
-      Serial.println("Mode: normal");
-    }
-  }
-
   void control(uint8_t posMainThrottle) {
     if (posMainThrottle <= 3) {
       _allowAt = 0;
@@ -71,12 +41,6 @@ public:
   }
 
   uint8_t allowCompressor() {
-    // Don't switch compressor on while power on engine
-    // To fix hight RPM
-    if (!timeout(_poweredonAt, engineOnTimeout)) {
-      return false;
-    }
-
     if (_compressorBlocked) {
       return false;
     }
@@ -96,11 +60,6 @@ private:
   // 70 - is ok temperature
   // 80 - is bad, stop boost
   const int16_t boostOffTemperature = 80;
-
-  enum modeType { COMFORT = 0, NORMAL = 1 };
-  modeType _mode = NORMAL;
-
-  unsigned long _poweredoffAt, _poweredonAt;
 
   unsigned long _disallowAt, _allowAt;
 

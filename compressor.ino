@@ -2,26 +2,22 @@
 #include <TimerMs.h>
 
 #include "controller.h"
-#include "poweroff.h"
-#include "poweroff_notify.h"
 #include "sensor.h"
 #include "switch.h"
 #include "temperature_control.h"
 
-const uint8_t POWEROFF_PIN = 2;
-
 const uint8_t TEMP1_PIN = A4;
+const uint8_t TEMP_PIN = A3;
 
 const uint8_t THROTTLE_PIN = A0;
 const uint16_t THROTTLE_MIN = 90;
 const uint16_t THROTTLE_MAX = 845;
 
 const bool LOG_TEMPERATURE = true;
-const bool LOG_SENSOR_RAW = false;
+const bool LOG_SENSOR_RAW = true;
 const bool LOG_POSITION = true;
 const bool LOG_COMPRESSOR_STATUS = false;
 const bool LOG_COOLER_INTERNAL = false;
-const bool LOG_PRESSURE = true;
 
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
@@ -42,12 +38,8 @@ TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs logPressure(10, true, false);
 
-PowerOff powerOff(POWEROFF_PIN);
-PowerOffNotify powerOffNotify;
-
-// Sensor 1 after compressor
-// Only temperature
 Sensor sens1(TEMP1_PIN);
+Sensor sensTemp(TEMP_PIN);
 
 // Main throttle (uncontrolled)
 Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
@@ -82,8 +74,6 @@ TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
                                 PUMP_OFF_TEMPERATURE, false);
 TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
                                   COOLER_OFF_TEMPERATURE, true);
-
-bool poweredoff = true;
 
 Controller cntrl;
 
@@ -137,48 +127,19 @@ void loopCalibrate() {
 }
 
 void loopNormal() {
-  bool powerOffNeed = powerOff.need();
+  cntrl.control(sensThrottle.position());
 
-  if (powerOffNeed && !poweredoff) {
-    Serial.println("Power off");
-
-    poweredoff = true;
-
-    powerOffNotify.poweroff();
-    compressor.poweroff();
-
-    tControlPump.poweroff();
-    tControlCooler.poweroff();
-    cntrl.poweroff();
-    sensThrottle.poweroff();
-    sens2.poweroff();
-  } else if (!powerOffNeed && poweredoff) {
-    Serial.println("Power on");
-
-    poweredoff = false;
-
-    powerOffNotify.poweron();
+  if (cntrl.allowCompressor()) {
     compressor.poweron();
-    cntrl.poweron();
-    sensThrottle.poweron();
-    sens2.poweron();
-  }
-
-  if (!poweredoff) {
-    cntrl.control(sensThrottle.position());
-
-    if (cntrl.allowCompressor()) {
-      compressor.poweron();
-    } else {
-      compressor.poweroff();
-    }
+  } else {
+    compressor.poweroff();
   }
 
   if (logMain.tick()) {
     log();
   }
 
-  if (heatCheck.tick() && !poweredoff) {
+  if (heatCheck.tick()) {
     int16_t temp = sens1.temperature();
 
     tControlPump.control(temp);
@@ -192,11 +153,6 @@ void log() {
   if (LOG_TEMPERATURE && logTemp.tick()) {
     Serial.print(">sens1 temperature:");
     Serial.println(sens1.temperature());
-  }
-
-  if (LOG_PRESSURE && logPressure.tick()) {
-    Serial.print(">sens2 pressure (kpa):");
-    Serial.println(sens2.pressure());
   }
 
   if (LOG_POSITION && logPosition.tick()) {
@@ -214,11 +170,11 @@ void log() {
       Serial.print(">sens1 voltage temp:");
       Serial.println(sens1.voltageTemp());
 
+      Serial.print(">sens voltage temp:");
+      Serial.println(sensTemp.voltageTemp());
+
       Serial.print(">sens main throttle voltage position:");
       Serial.println(sensThrottle.voltagePosition());
-
-      Serial.print(">sens2 voltage map:");
-      Serial.println(sens2.voltagePressure());
     }
 
     if (LOG_COOLER_INTERNAL) {

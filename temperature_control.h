@@ -46,20 +46,6 @@ public:
     }
   }
 
-  void poweroff() {
-    if (!_on) {
-      return;
-    }
-
-    if (_isPWM) {
-      analogWrite(_pin, 0);
-    } else {
-      digitalWrite(_pin, OFF);
-    }
-
-    _on = false;
-  }
-
   int regulatorValue() { return regulator.getResult(); }
 
 private:
