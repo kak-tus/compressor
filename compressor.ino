@@ -6,16 +6,15 @@
 #include "switch.h"
 #include "temperature_control.h"
 
-const uint8_t TEMP1_PIN = A4;
 const uint8_t TEMP_PIN = A3;
 
 const uint8_t THROTTLE_PIN = A0;
-const uint16_t THROTTLE_MIN = 90;
-const uint16_t THROTTLE_MAX = 845;
+const float THROTTLE_MIN = 0.58;
+const float THROTTLE_MAX = 4.12;
 
-const bool LOG_TEMPERATURE = true;
-const bool LOG_SENSOR_RAW = true;
-const bool LOG_POSITION = true;
+const bool LOG_TEMPERATURE = false;
+const bool LOG_SENSOR_RAW = false;
+const bool LOG_POSITION = false;
 const bool LOG_COMPRESSOR_STATUS = false;
 const bool LOG_COOLER_INTERNAL = false;
 
@@ -28,8 +27,6 @@ const uint8_t PUMP_OFF_TEMPERATURE = 20;
 const uint8_t COOLER_ON_TEMPERATURE = 40;
 const uint8_t COOLER_OFF_TEMPERATURE = 35;
 
-const uint8_t MAP2_PIN = A3;
-
 TimerMs logMain(100, true, false);
 TimerMs logTemp(10000, true, false);
 TimerMs logPosition(10, true, false);
@@ -38,37 +35,10 @@ TimerMs logOther(1000, true, false);
 TimerMs heatCheck(1000, true, false);
 TimerMs logPressure(10, true, false);
 
-Sensor sens1(TEMP1_PIN);
 Sensor sensTemp(TEMP_PIN);
 
 // Main throttle (uncontrolled)
 Sensor sensThrottle(THROTTLE_PIN, THROTTLE_MIN, THROTTLE_MAX);
-
-// delta = (voltage2 * pressure1 - voltage1 * pressure2) / (pressure2 -
-// pressure1)
-//
-// angle = (pressure1 - pressure2) / (voltage1 - voltage2)
-//
-// Voltages must be native arduino integer values (0-1024)
-// Pressure - is value in kpa
-//
-// nativeVoltage = voltage * 1024 / 5
-// mm to kpa mm*0.1333224
-//
-// From customer:
-// Delta -0.098
-// Angle 65.8
-//
-// Map sensor 2 use vcc/gnd from ecu, so we have a little difference in pressure
-//
-// 100.5408578 333
-// 42.70882656 153
-const float sensor2MapDelta = -20.07039998;
-const float sensor2MapAngle = 0.3212890624;
-
-// Sensor 2 - main sensor, after compressor
-// Only pressure
-Sensor sens2(MAP2_PIN, sensor2MapDelta, sensor2MapAngle);
 
 TemperatureControl tControlPump(PUMP_PIN, PUMP_ON_TEMPERATURE,
                                 PUMP_OFF_TEMPERATURE, false);
@@ -140,7 +110,7 @@ void loopNormal() {
   }
 
   if (heatCheck.tick()) {
-    int16_t temp = sens1.temperature();
+    int16_t temp = sensTemp.temperature();
 
     tControlPump.control(temp);
     tControlCooler.control(temp);
@@ -151,8 +121,8 @@ void loopNormal() {
 
 void log() {
   if (LOG_TEMPERATURE && logTemp.tick()) {
-    Serial.print(">sens1 temperature:");
-    Serial.println(sens1.temperature());
+    Serial.print(">sens temperature:");
+    Serial.println(sensTemp.temperature());
   }
 
   if (LOG_POSITION && logPosition.tick()) {
@@ -167,13 +137,10 @@ void log() {
     }
 
     if (LOG_SENSOR_RAW) {
-      Serial.print(">sens1 voltage temp:");
-      Serial.println(sens1.voltageTemp());
-
-      Serial.print(">sens voltage temp:");
+      Serial.print(">sens temp voltage:");
       Serial.println(sensTemp.voltageTemp());
 
-      Serial.print(">sens main throttle voltage position:");
+      Serial.print(">sens main throttle voltage:");
       Serial.println(sensThrottle.voltagePosition());
     }
 

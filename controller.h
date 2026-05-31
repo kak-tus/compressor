@@ -3,13 +3,13 @@ public:
   Controller() {}
 
   void control(uint8_t posMainThrottle) {
-    if (posMainThrottle <= 3) {
+    if (posMainThrottle <= 2) {
       _allowAt = 0;
 
       if (_allowCompressor && _disallowAt == 0) {
         _disallowAt = millis();
       }
-    } else if (posMainThrottle > 3) {
+    } else if (posMainThrottle > 2) {
       _disallowAt = 0;
 
       if (!_allowCompressor && _allowAt == 0) {
@@ -67,5 +67,4 @@ private:
 
   const uint8_t allowTimeout = 100;
   const uint16_t disallowTimeout = 1000;
-  const uint16_t engineOnTimeout = 3000;
 };
