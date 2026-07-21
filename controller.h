@@ -3,13 +3,13 @@ public:
   Controller() {}
 
   void control(uint8_t posMainThrottle) {
-    if (posMainThrottle <= 2) {
+    if (posMainThrottle < disallowPos) {
       _allowAt = 0;
 
       if (_allowCompressor && _disallowAt == 0) {
         _disallowAt = millis();
       }
-    } else if (posMainThrottle > 2) {
+    } else if (posMainThrottle > allowPos) {
       _disallowAt = 0;
 
       if (!_allowCompressor && _allowAt == 0) {
@@ -35,7 +35,7 @@ public:
   void setTemperature(int16_t temperature) {
     if (temperature > boostOffTemperature) {
       _compressorBlocked = true;
-    } else {
+    } else if (temperature < boostOffTemperature - 5) {
       _compressorBlocked = false;
     }
   }
@@ -67,4 +67,9 @@ private:
 
   const uint8_t allowTimeout = 100;
   const uint16_t disallowTimeout = 1000;
+
+  const uint8_t allowPos = 15;
+  const uint8_t disallowPos = 10;
+
+  const uint16_t startTimeout = 2000;
 };

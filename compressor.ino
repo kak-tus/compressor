@@ -6,13 +6,13 @@
 #include "switch.h"
 #include "temperature_control.h"
 
-const uint8_t TEMP_PIN = A3;
+const uint8_t TEMP_PIN = A4;
 
 const uint8_t THROTTLE_PIN = A0;
-const float THROTTLE_MIN = 0.58;
+const float THROTTLE_MIN = 0.61;
 const float THROTTLE_MAX = 4.12;
 
-const bool LOG_TEMPERATURE = false;
+const bool LOG_TEMPERATURE = true;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = false;
 const bool LOG_COMPRESSOR_STATUS = false;
@@ -21,11 +21,11 @@ const bool LOG_COOLER_INTERNAL = false;
 const uint8_t PUMP_PIN = 7;
 const uint8_t COOLER_PIN = 9;
 
-const uint8_t PUMP_ON_TEMPERATURE = 35;
-const uint8_t PUMP_OFF_TEMPERATURE = 20;
+const uint8_t PUMP_ON_TEMPERATURE = 15;
+const uint8_t PUMP_OFF_TEMPERATURE = 0;
 
-const uint8_t COOLER_ON_TEMPERATURE = 40;
-const uint8_t COOLER_OFF_TEMPERATURE = 35;
+const uint8_t COOLER_ON_TEMPERATURE = 55;
+const uint8_t COOLER_OFF_TEMPERATURE = 50;
 
 TimerMs logMain(100, true, false);
 TimerMs logTemp(10000, true, false);
@@ -53,7 +53,13 @@ Switch compressor(COMPRESSOR_PIN);
 
 const bool USE_CALIBRATE = false;
 
-void setup() { Serial.begin(115200); }
+void setup() {
+  Serial.begin(115200);
+
+  // Little delay to allow on relays from signal channels
+  // To get correct data from it
+  delay(100);
+}
 
 void loop() {
   if (USE_CALIBRATE) {

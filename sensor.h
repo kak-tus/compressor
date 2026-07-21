@@ -15,11 +15,11 @@ public:
   }
 
   int16_t temperature() {
-    uint16_t rawVoltage = analogRead(_tempPin);
+    uint16_t raw = analogRead(_tempPin);
 
-    _voltageTemp += ((float)rawVoltage - _voltageTemp) * 0.5;
+    float inVolt = (float)raw * 5.0 / (float)1024;
 
-    float inVolt = _voltageTemp * 5.0 / (float)1024;
+    _voltageTemp += ((float)inVolt - _voltageTemp) * 0.5;
 
     float voltageFrom, voltageDiff, tempFrom, tempDiff;
 
@@ -186,16 +186,17 @@ public:
       tempDiff = 184 - tempFrom;
     }
 
-    int16_t _temp = tempFrom + (int32_t)(voltageFrom - inVolt) *
-                                   tempDiff / voltageDiff;
+    int16_t _temp = tempFrom + (voltageFrom - inVolt) * tempDiff / voltageDiff;
 
     return _temp;
   }
 
   uint8_t position() {
-    uint16_t rawVoltage = analogRead(_positionPin);
+    uint16_t raw = analogRead(_positionPin);
 
-    _voltagePosition = (float)rawVoltage * 5.0 / (float)1024;
+    float inVolt = (float)raw * 5.0 / (float)1024;
+
+    _voltagePosition += ((float)inVolt - _voltagePosition) * 0.5;
 
     uint8_t position;
 
@@ -211,7 +212,7 @@ public:
     return position;
   }
 
-  uint16_t voltageTemp() { return _voltageTemp; }
+  float voltageTemp() { return _voltageTemp; }
 
   float voltagePosition() { return _voltagePosition; }
 
