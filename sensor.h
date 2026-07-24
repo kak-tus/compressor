@@ -3,6 +3,12 @@ public:
   Sensor(uint8_t tempPin) {
     _tempPin = tempPin;
 
+    uint16_t raw = analogRead(_tempPin);
+
+    float inVolt = (float)raw * 5.0 / (float)1024;
+
+    _voltageTemp = inVolt;
+
     pinMode(_tempPin, INPUT);
   }
 
@@ -10,6 +16,12 @@ public:
     _positionPin = positionPin;
     _positionMin = min;
     _positionMax = max;
+
+    uint16_t raw = analogRead(_positionPin);
+
+    float inVolt = (float)raw * 5.0 / (float)1024;
+
+    _voltagePosition = inVolt;
 
     pinMode(_positionPin, INPUT);
   }

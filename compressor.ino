@@ -6,20 +6,21 @@
 #include "switch.h"
 #include "temperature_control.h"
 
-const uint8_t TEMP_PIN = A4;
-
 const uint8_t THROTTLE_PIN = A0;
+const uint8_t TEMP_PIN = A3;
+
+const uint8_t COMPRESSOR_PIN = 4;
+const uint8_t PUMP_PIN = 7;
+const uint8_t COOLER_PIN = 9;
+
 const float THROTTLE_MIN = 0.61;
 const float THROTTLE_MAX = 4.12;
 
-const bool LOG_TEMPERATURE = true;
+const bool LOG_TEMPERATURE = false;
 const bool LOG_SENSOR_RAW = false;
 const bool LOG_POSITION = false;
 const bool LOG_COMPRESSOR_STATUS = false;
 const bool LOG_COOLER_INTERNAL = false;
-
-const uint8_t PUMP_PIN = 7;
-const uint8_t COOLER_PIN = 9;
 
 const uint8_t PUMP_ON_TEMPERATURE = 15;
 const uint8_t PUMP_OFF_TEMPERATURE = 0;
@@ -46,8 +47,6 @@ TemperatureControl tControlCooler(COOLER_PIN, COOLER_ON_TEMPERATURE,
                                   COOLER_OFF_TEMPERATURE, true);
 
 Controller cntrl;
-
-const uint8_t COMPRESSOR_PIN = 4;
 
 Switch compressor(COMPRESSOR_PIN);
 
