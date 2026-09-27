@@ -15,11 +15,16 @@ public:
 
         Serial.println("Compressor: disallow");
       }
+
+      if (_lowGas && timeout(_inState, lowGasOffTimeout)) {
+        _lowGas = false;
+      }
     } else if (pos >= onPos) {
       if (_state != ON) {
         _inState = millis();
         _state = ON;
         _prevState = ON;
+        _lowGas = false;
       }
 
       if (!_allowCompressor && timeout(_inState, onTimeout)) {
@@ -35,13 +40,17 @@ public:
 
       if (_prevState == OFF) {
         if (timeout(_inState, offInCruiseTimeout)) {
+          if (!_lowGas) {
+            _lowGas = true;
+          }
+
           if (_allowCompressor) {
             _allowCompressor = false;
 
             Serial.println("Compressor: disallow");
           }
         } else {
-          if (!_allowCompressor && timeout(_inState, onTimeout)) {
+          if (!_allowCompressor && timeout(_inState, onTimeout) && !_lowGas) {
             _allowCompressor = true;
 
             Serial.println("Compressor: allow");
@@ -91,9 +100,10 @@ private:
   bool _allowCompressor = true, _compressorBlocked = false;
 
   const uint8_t onTimeout = 10;
-  const uint8_t offTimeout = 20;
+  const uint8_t offTimeout = 1000;
   const uint16_t offInCruiseTimeout = 250;
   const uint16_t onToCruiseTimeout = 1000;
+  const uint16_t lowGasOffTimeout = 5000;
 
   /*
   off - compressor is always off
@@ -113,4 +123,6 @@ private:
 
   enum state { OFF, CRUISE, ON };
   state _state = OFF, _prevState = OFF;
+
+  bool _lowGas = false;
 };
